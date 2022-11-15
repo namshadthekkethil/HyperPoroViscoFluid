@@ -101,9 +101,9 @@ public:
   static void initialise_lde(EquationSystems &es,
                              LargeDeformationElasticity &lde);
   static void define_systems(EquationSystems &es);
-  static void init_hyperelastic_model(EquationSystems &es);
+  static void init_hyperelastic_model(EquationSystems &es, int rank);
   static void update_hyperelastic_model(EquationSystems &es);
-  static void initialize_material_axes(EquationSystems &es);
+  static void initialize_material_axes(EquationSystems &es, int rank);
   static void compute_PK2_hyper(EquationSystems &es, const Elem *elem);
   static void compute_PK2(EquationSystems &es, const Elem *elem);
   static void compute_D();

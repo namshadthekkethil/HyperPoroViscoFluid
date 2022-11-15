@@ -271,7 +271,7 @@ void solve_systems(LibMeshInit &init, int rank, int np)
                MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 #endif
 
-  HyperElasticModel::init_hyperelastic_model(equation_systems);
+  HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
   if (InputParam::porous == 1)
     PoroElastic::initialise_poroelastic(equation_systems);
   lde.pre_solve();

@@ -19,7 +19,8 @@ HyperElasticModel::HyperElasticModel() {}
 HyperElasticModel::~HyperElasticModel() {}
 
 void HyperElasticModel::initialise_lde(EquationSystems &es,
-                                       LargeDeformationElasticity &lde) {
+                                       LargeDeformationElasticity &lde)
+{
   lde.define_systems();
   es.parameters.set<Real>("nonlinear solver absolute residual tolerance") =
       InputParam::nonlinear_abs_tol;
@@ -50,7 +51,8 @@ void HyperElasticModel::initialise_lde(EquationSystems &es,
   Stabilisation::compute_mu = &compute_mu;
 }
 
-void HyperElasticModel::define_systems(EquationSystems &es) {
+void HyperElasticModel::define_systems(EquationSystems &es)
+{
 
   System &f0_system = es.add_system<System>("fiber direction");
   System &s0_system = es.add_system<System>("sheet direction");
@@ -69,13 +71,15 @@ void HyperElasticModel::define_systems(EquationSystems &es) {
   ExplicitSystem &pext_system = es.add_system<ExplicitSystem>("pExtSystem");
   pext_system.add_variable("pExtVar", CONSTANT, MONOMIAL);
 
-  for (unsigned int d = 0; d < MESH_DIMENSION; ++d) {
+  for (unsigned int d = 0; d < MESH_DIMENSION; ++d)
+  {
     ostringstream os;
     os << "f0_" << d;
     f0_system.add_variable(os.str(), CONSTANT, MONOMIAL);
   }
 
-  for (unsigned int d = 0; d < MESH_DIMENSION; ++d) {
+  for (unsigned int d = 0; d < MESH_DIMENSION; ++d)
+  {
     ostringstream os;
     os << "s0_" << d;
     s0_system.add_variable(os.str(), CONSTANT, MONOMIAL);
@@ -91,8 +95,10 @@ void HyperElasticModel::define_systems(EquationSystems &es) {
     ViscoElastic::define_systems(es);
 }
 
-void HyperElasticModel::init_hyperelastic_model(EquationSystems &es) {
-  if (InputParam::strain_model == 1) {
+void HyperElasticModel::init_hyperelastic_model(EquationSystems &es, int rank)
+{
+  if (InputParam::strain_model == 1)
+  {
     HOModel::aHO = InputParam::aHO;
     HOModel::bHO = InputParam::bHO;
     HOModel::afHO = InputParam::afHO;
@@ -103,16 +109,19 @@ void HyperElasticModel::init_hyperelastic_model(EquationSystems &es) {
     HOModel::bfsHO = InputParam::bfsHO;
   }
 
-  else if (InputParam::strain_model == 2) {
+  else if (InputParam::strain_model == 2)
+  {
     NeoHook::G = InputParam::G;
   }
 
-  else if (InputParam::strain_model == 3) {
+  else if (InputParam::strain_model == 3)
+  {
     CellFibre::G = InputParam::G;
     CellFibre::alpha_fib = InputParam::alpha_fib;
   }
 
-  if (InputParam::viscoelastic == 1) {
+  if (InputParam::viscoelastic == 1)
+  {
     ViscoElastic::tau_visela = InputParam::tau_visela;
     ViscoElastic::beta_visela = InputParam::beta_visela;
   }
@@ -128,7 +137,7 @@ void HyperElasticModel::init_hyperelastic_model(EquationSystems &es) {
   Stabilisation::dt = InputParam::dt;
   Stabilisation::time_itr = 0;
 
-  initialize_material_axes(es);
+  initialize_material_axes(es, rank);
 
   GeomPar::init_geoPar();
   Stabilisation::init_stab(es);
@@ -136,7 +145,8 @@ void HyperElasticModel::init_hyperelastic_model(EquationSystems &es) {
   BoundaryCond::init_boundary_cond(es);
 }
 
-void HyperElasticModel::update_hyperelastic_model(EquationSystems &es) {
+void HyperElasticModel::update_hyperelastic_model(EquationSystems &es)
+{
 
   Incompress::solve_incomp(es);
 
@@ -150,38 +160,61 @@ void HyperElasticModel::update_hyperelastic_model(EquationSystems &es) {
 
   Stabilisation::solve_prime(es);
 
-  if (InputParam::viscoelastic == 1) {
+  if (InputParam::viscoelastic == 1)
+  {
     ViscoElastic::update_QS(es);
   }
 }
 
-void HyperElasticModel::initialize_material_axes(EquationSystems &es) {
+void HyperElasticModel::initialize_material_axes(EquationSystems &es, int rank)
+{
   const MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
-  
+  DenseMatrix<double> f0_data;
+  f0_data.resize(mesh.n_elem(),dim);
 
-  std::map<int, VectorValue<double>> f0_data;
-  ifstream f0_stream(InputParam::fibre_file_name);
-  for (unsigned int e = 0; e < mesh.n_elem(); ++e) {
-    int e_idx;
-    f0_stream >> e_idx;
-    VectorValue<double> &f0 = f0_data[e];
-    for (unsigned int d = 0; d < dim; ++d)
-      f0_stream >> f0(d);
-  }
-  f0_stream.close();
+  cout<<"mesh_n_elem="<<mesh.n_elem()<<endl;
 
-  std::map<int, VectorValue<double>> s0_data;
-  ifstream s0_stream(InputParam::sheet_file_name);
-  for (unsigned int e = 0; e < mesh.n_elem(); ++e) {
-    int e_idx;
-    s0_stream >> e_idx;
-    VectorValue<double> &s0 = s0_data[e];
-    for (unsigned int d = 0; d < dim; ++d)
-      s0_stream >> s0(d);
+  if (rank == 0)
+  {
+    ifstream f0_stream(InputParam::fibre_file_name);
+    for (unsigned int e = 0; e < mesh.n_elem(); ++e)
+    {
+      int e_idx;
+      f0_stream >> e_idx;
+      for (unsigned int d = 0; d < dim; ++d)
+        f0_stream >> f0_data(e,d);
+    }
+    f0_stream.close();
   }
-  s0_stream.close();
+
+  DenseMatrix<double> s0_data;
+  s0_data.resize(mesh.n_elem(),dim);
+
+  if (rank == 0)
+  {
+    ifstream s0_stream(InputParam::sheet_file_name);
+    for (unsigned int e = 0; e < mesh.n_elem(); ++e)
+    {
+      int e_idx;
+      s0_stream >> e_idx;
+
+      for (unsigned int d = 0; d < dim; ++d)
+        s0_stream >> s0_data(e,d);
+    }
+    s0_stream.close();
+  }
+
+  for(unsigned int e = 0; e < mesh.n_elem(); ++e)
+  {
+    for (unsigned int d = 0; d < dim; ++d)
+    {
+      MPI_Bcast(&f0_data(e,d), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&s0_data(e,d), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+  }
+
 
   System &f0_system = es.get_system<System>("fiber direction");
   NumericVector<double> &f0_vec = *f0_system.solution;
@@ -195,26 +228,25 @@ void HyperElasticModel::initialize_material_axes(EquationSystems &es) {
   const MeshBase::const_element_iterator end_el =
       mesh.active_local_elements_end();
 
-  MeshBase::const_element_iterator el_st = mesh.active_local_elements_begin();
+  MeshBase::const_element_iterator el_st = mesh.active_elements_begin();
   Elem *elem_st = *el_st;
   const int elem_id_st = elem_st->id();
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     Elem *elem = *el;
     const int elem_id = elem->id();
 
-    cout<<"elem_id="<<elem_id<<" "<<elem_id-elem_id_st<<endl;
-
-    const VectorValue<double> f0 = f0_data[elem_id-elem_id_st].unit();
-    for (unsigned int d = 0; d < dim; ++d) {
+    for (unsigned int d = 0; d < dim; ++d)
+    {
       const int dof_index = elem->dof_number(f0_system_num, d, 0);
-      f0_vec.set(dof_index, f0(d));
+      f0_vec.set(dof_index, f0_data(elem_id - elem_id_st,d));
     }
 
-    const VectorValue<double> s0 = s0_data[elem_id-elem_id_st].unit();
-    for (unsigned int d = 0; d < dim; ++d) {
+    for (unsigned int d = 0; d < dim; ++d)
+    {
       const int dof_index = elem->dof_number(s0_system_num, d, 0);
-      s0_vec.set(dof_index, s0(d));
+      s0_vec.set(dof_index, s0_data(elem_id - elem_id_st,d));
     }
   }
   f0_vec.close();
@@ -226,9 +258,11 @@ void HyperElasticModel::initialize_material_axes(EquationSystems &es) {
 }
 
 void HyperElasticModel::compute_PK2_hyper(EquationSystems &es,
-                                          const Elem *elem) {
+                                          const Elem *elem)
+{
   S.resize(MESH_DIMENSION, MESH_DIMENSION);
-  if (InputParam::strain_model == 1) {
+  if (InputParam::strain_model == 1)
+  {
     HOModel::compute_HO_PK2(es, elem);
     S.add(1.0, HOModel::SIso);
     S.add(1.0, HOModel::Sf);
@@ -236,12 +270,14 @@ void HyperElasticModel::compute_PK2_hyper(EquationSystems &es,
     S.add(1.0, HOModel::Sfs);
   }
 
-  else if (InputParam::strain_model == 2) {
+  else if (InputParam::strain_model == 2)
+  {
     NeoHook::compute_NH_PK2(es, elem);
     S.add(1.0, NeoHook::SIso);
   }
 
-  else if (InputParam::strain_model == 3) {
+  else if (InputParam::strain_model == 3)
+  {
     CellFibre::compute_CF_PK2(es, elem);
     S.add(1.0, CellFibre::SIso);
     S.add(1.0, CellFibre::Sf);
@@ -249,28 +285,35 @@ void HyperElasticModel::compute_PK2_hyper(EquationSystems &es,
   }
 }
 
-void HyperElasticModel::compute_PK2(EquationSystems &es, const Elem *elem) {
+void HyperElasticModel::compute_PK2(EquationSystems &es, const Elem *elem)
+{
   compute_PK2_hyper(es, elem);
-  if (InputParam::viscoelastic == 1) {
+  if (InputParam::viscoelastic == 1)
+  {
     ViscoElastic::compute_Q(es, elem);
     S.resize(MESH_DIMENSION, MESH_DIMENSION);
     S.add(1.0, ViscoElastic::Q);
   }
 
-  if (InputParam::strain_model == 1) {
+  if (InputParam::strain_model == 1)
+  {
     S.add(1.0, HOModel::Sp);
   }
 
-  else if (InputParam::strain_model == 2) {
+  else if (InputParam::strain_model == 2)
+  {
     S.add(1.0, NeoHook::Sp);
   }
 
-  else if (InputParam::strain_model == 3) {
+  else if (InputParam::strain_model == 3)
+  {
     S.add(1.0, CellFibre::Sp);
   }
 
-  if (InputParam::active_tension == 1) {
-    if (InputParam::ttime > InputParam::t_end_diastole) {
+  if (InputParam::active_tension == 1)
+  {
+    if (InputParam::ttime > InputParam::t_end_diastole)
+    {
       ActiveContra::compute_PK2_active();
       S.add(1.0, ActiveContra::Sa);
     }
@@ -281,19 +324,23 @@ void HyperElasticModel::compute_PK2(EquationSystems &es, const Elem *elem) {
   P.right_multiply(S);
 }
 
-void HyperElasticModel::compute_D() {
-  if (InputParam::strain_model == 1) {
+void HyperElasticModel::compute_D()
+{
+  if (InputParam::strain_model == 1)
+  {
     HOModel::compute_HO_D_iso();
     HOModel::compute_HO_D_aniso();
     HOModel::compute_D_p();
   }
 
-  else if (InputParam::strain_model == 2) {
+  else if (InputParam::strain_model == 2)
+  {
     NeoHook::compute_NH_D_iso();
     NeoHook::compute_D_p();
   }
 
-  else if (InputParam::strain_model == 3) {
+  else if (InputParam::strain_model == 3)
+  {
     CellFibre::compute_CF_D_iso();
     CellFibre::compute_CF_D_aniso();
     CellFibre::compute_D_p();
@@ -306,27 +353,34 @@ void HyperElasticModel::compute_D() {
   for (unsigned int i = 0; i < MESH_DIMENSION; i++)
     for (unsigned int j = 0; j < MESH_DIMENSION; j++)
       for (unsigned int k = 0; k < MESH_DIMENSION; k++)
-        for (unsigned int l = 0; l < MESH_DIMENSION; l++) {
-          if (InputParam::strain_model == 1) {
+        for (unsigned int l = 0; l < MESH_DIMENSION; l++)
+        {
+          if (InputParam::strain_model == 1)
+          {
             Dmat.D[i][j][k][l] =
                 HOModel::Dmat.Diso[i][j][k][l] + HOModel::Dmat.Df[i][j][k][l] +
                 HOModel::Dmat.Ds[i][j][k][l] + HOModel::Dmat.Dfs[i][j][k][l] +
                 HOModel::Dmat.Dp[i][j][k][l];
-          } else if (InputParam::strain_model == 2) {
+          }
+          else if (InputParam::strain_model == 2)
+          {
             Dmat.D[i][j][k][l] =
                 NeoHook::Dmat.Diso[i][j][k][l] + NeoHook::Dmat.Dp[i][j][k][l];
           }
 
-          else if (InputParam::strain_model == 3) {
+          else if (InputParam::strain_model == 3)
+          {
             Dmat.D[i][j][k][l] = CellFibre::Dmat.Diso[i][j][k][l] +
                                  CellFibre::Dmat.Df[i][j][k][l] +
                                  CellFibre::Dmat.Ds[i][j][k][l] +
                                  CellFibre::Dmat.Dp[i][j][k][l];
           }
 
-          if (InputParam::viscoelastic == 1) {
+          if (InputParam::viscoelastic == 1)
+          {
             Dmat.D[i][j][k][l] = 0.0;
-            if (InputParam::strain_model == 1) {
+            if (InputParam::strain_model == 1)
+            {
               Dmat.D[i][j][k][l] +=
                   exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela)) *
                       (HOModel::Dmat.Diso[i][j][k][l] +
@@ -334,14 +388,17 @@ void HyperElasticModel::compute_D() {
                        HOModel::Dmat.Ds[i][j][k][l] +
                        HOModel::Dmat.Dfs[i][j][k][l]) +
                   HOModel::Dmat.Dp[i][j][k][l];
-            } else if (InputParam::strain_model == 2) {
+            }
+            else if (InputParam::strain_model == 2)
+            {
               Dmat.D[i][j][k][l] +=
                   exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela)) *
                       (NeoHook::Dmat.Diso[i][j][k][l]) +
                   NeoHook::Dmat.Dp[i][j][k][l];
             }
 
-            else if (InputParam::strain_model == 3) {
+            else if (InputParam::strain_model == 3)
+            {
               Dmat.D[i][j][k][l] +=
                   (exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela))) *
                       (CellFibre::Dmat.Diso[i][j][k][l] +
@@ -362,31 +419,40 @@ void HyperElasticModel::compute_D() {
     for (unsigned int j = 0; j < MESH_DIMENSION; j++)
       for (unsigned int k = 0; k < MESH_DIMENSION; k++)
         for (unsigned int l = 0; l < MESH_DIMENSION; l++)
-          for (unsigned int m = 0; m < MESH_DIMENSION; m++) {
+          for (unsigned int m = 0; m < MESH_DIMENSION; m++)
+          {
             D_hyper.FD[i][j][k][l] += GeomPar::F(i, m) * Dmat.D[m][j][k][l];
           }
 }
 
-void HyperElasticModel::compute_mu(EquationSystems &es, const Elem *elem) {
-  if (InputParam::strain_model == 1) {
+void HyperElasticModel::compute_mu(EquationSystems &es, const Elem *elem)
+{
+  if (InputParam::strain_model == 1)
+  {
     HOModel::compute_mu(es, elem);
     Stabilisation::mu = HOModel::mu;
-  } else if (InputParam::strain_model == 2) {
+  }
+  else if (InputParam::strain_model == 2)
+  {
     NeoHook::compute_mu(es, elem);
     Stabilisation::mu = NeoHook::mu;
-  } else if (InputParam::strain_model == 3) {
+  }
+  else if (InputParam::strain_model == 3)
+  {
     CellFibre::compute_mu(es, elem);
     Stabilisation::mu = CellFibre::mu;
   }
 
   if (InputParam::active_tension == 1)
-    if (InputParam::ttime > InputParam::t_end_diastole) {
+    if (InputParam::ttime > InputParam::t_end_diastole)
+    {
       ActiveContra::compute_mu();
       Stabilisation::mu += ActiveContra::mu;
     }
 }
 
-void HyperElasticModel::compute_pre_itr(EquationSystems &es) {
+void HyperElasticModel::compute_pre_itr(EquationSystems &es)
+{
   Unsteady::update_velocity(es);
   Unsteady::update_acceleration(es);
   Stabilisation::compute_tau(es);
@@ -395,7 +461,8 @@ void HyperElasticModel::compute_pre_itr(EquationSystems &es) {
 void HyperElasticModel::compute_param_resid_qp(
     EquationSystems &es, const Elem *elem, unsigned int qp,
     const std::vector<std::vector<Real>> &phi,
-    const std::vector<std::vector<RealGradient>> &dphi) {
+    const std::vector<std::vector<RealGradient>> &dphi)
+{
   GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
 
   compute_PK2(es, elem);
@@ -410,7 +477,8 @@ void HyperElasticModel::compute_param_resid_qp(
 void HyperElasticModel::compute_param_jacob_qp(
     EquationSystems &es, const Elem *elem, unsigned int qp,
     const std::vector<std::vector<Real>> &phi,
-    const std::vector<std::vector<RealGradient>> &dphi) {
+    const std::vector<std::vector<RealGradient>> &dphi)
+{
   GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
   TensorDer::compute_dJdF();
   TensorDer::compute_dJFinvTdF();
@@ -427,7 +495,8 @@ void HyperElasticModel::compute_param_jacob_qp(
 void HyperElasticModel::compute_param_resid_dofi(
     const std::vector<std::vector<Real>> &phi,
     const std::vector<std::vector<RealGradient>> &dphi, unsigned int qp,
-    unsigned int dof_i) {
+    unsigned int dof_i)
+{
   TensorDer::compute_gradNA(dphi, qp, dof_i);
   Stabilisation::compute_stab();
 
@@ -436,10 +505,12 @@ void HyperElasticModel::compute_param_resid_dofi(
   Resid(MESH_DIMENSION) +=
       Stabilisation::dofi_cur(dof_i) * Stabilisation::res_stab;
 
-  for (unsigned int i = 0; i < MESH_DIMENSION; i++) {
+  for (unsigned int i = 0; i < MESH_DIMENSION; i++)
+  {
 
     Resid(i) += phi[dof_i][qp] * (InputParam::rho_s * GeomPar::acc_vec(i));
-    for (unsigned int j = 0; j < MESH_DIMENSION; j++) {
+    for (unsigned int j = 0; j < MESH_DIMENSION; j++)
+    {
       Resid(i) += (P(i, j) * dphi[dof_i][qp](j));
     }
   }
@@ -448,7 +519,8 @@ void HyperElasticModel::compute_param_resid_dofi(
 void HyperElasticModel::compute_param_jacob_dofi(
     const std::vector<std::vector<Real>> &phi,
     const std::vector<std::vector<RealGradient>> &dphi, unsigned int qp,
-    unsigned int dof_i) {
+    unsigned int dof_i)
+{
   TensorDer::compute_gradNA(dphi, qp, dof_i);
   TensorDer::compute_gradNAxyz(dphi, qp, dof_i);
   Stabilisation::compute_stab();
@@ -457,14 +529,16 @@ void HyperElasticModel::compute_param_jacob_dofi(
 void HyperElasticModel::compute_param_jacob_dofi_dofj(
     const std::vector<std::vector<Real>> &phi,
     const std::vector<std::vector<RealGradient>> &dphi, unsigned int qp,
-    unsigned int dof_i, unsigned int dof_j) {
+    unsigned int dof_i, unsigned int dof_j)
+{
   TensorDer::compute_gradNB(dphi, qp, dof_j);
   TensorDer::compute_dJFinvTdu();
   Incompress::compute_incomp_res_der(phi, qp, dof_j);
   Stabilisation::compute_stab_der(phi, qp, dof_j);
 
   Jacob.resize(MESH_DIMENSION + 1, MESH_DIMENSION + 1);
-  for (unsigned int i = 0; i < MESH_DIMENSION; i++) {
+  for (unsigned int i = 0; i < MESH_DIMENSION; i++)
+  {
     Jacob(MESH_DIMENSION, i) += Incompress::dincompdu(i) * phi[dof_i][qp];
     Jacob(MESH_DIMENSION, i) +=
         Stabilisation::dofij_cur(dof_i, dof_j) * Stabilisation::dstabdu(i);
@@ -500,7 +574,8 @@ void HyperElasticModel::compute_param_jacob_dofi_dofj(
   for (unsigned int i = 0; i < MESH_DIMENSION; i++)
     for (unsigned int j = 0; j < MESH_DIMENSION; j++)
       for (unsigned int k = 0; k < MESH_DIMENSION; k++)
-        for (unsigned int l = 0; l < MESH_DIMENSION; l++) {
+        for (unsigned int l = 0; l < MESH_DIMENSION; l++)
+        {
           Jacob(i, k) += (0.5 * D_hyper.FD[i][j][k][l] * dphi[dof_j][qp](l) *
                           dphi[dof_i][qp](j));
 
@@ -516,7 +591,8 @@ void HyperElasticModel::compute_param_jacob_dofi_dofj(
 }
 
 void HyperElasticModel::update_total_velocity_displacement(
-    EquationSystems &es) {
+    EquationSystems &es)
+{
   NonlinearImplicitSystem &system_dis =
       es.get_system<NonlinearImplicitSystem>("NonlinearElasticity");
   System &system_dis_tot = es.get_system<System>("displacement_tot");
@@ -538,7 +614,8 @@ void HyperElasticModel::update_total_velocity_displacement(
   libMesh::MeshBase::const_node_iterator node_it = mesh.local_nodes_begin();
   libMesh::MeshBase::const_node_iterator node_end = mesh.local_nodes_end();
 
-  for (; node_it != node_end; ++node_it) {
+  for (; node_it != node_end; ++node_it)
+  {
     const libMesh::Node *nd = *node_it;
 
     const unsigned int dof_num_dis_x =
@@ -588,7 +665,8 @@ void HyperElasticModel::update_total_velocity_displacement(
   system_dis_tot.solution->localize(*system_dis_tot.current_local_solution);
 }
 
-void HyperElasticModel::compute_Jtot(EquationSystems &es) {
+void HyperElasticModel::compute_Jtot(EquationSystems &es)
+{
   const MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
@@ -627,7 +705,8 @@ void HyperElasticModel::compute_Jtot(EquationSystems &es) {
 
   // int count_Jn = 0;
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     for (unsigned int var = 0; var < dim; var++)
@@ -663,7 +742,7 @@ void HyperElasticModel::compute_Jtot(EquationSystems &es) {
   J_system.solution->localize(*J_system.current_local_solution);
 }
 
-void HyperElasticModel::compute_pext(EquationSystems & es)
+void HyperElasticModel::compute_pext(EquationSystems &es)
 {
   const MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
@@ -690,7 +769,6 @@ void HyperElasticModel::compute_pext(EquationSystems & es)
   ExplicitSystem &stress_system = es.get_system<ExplicitSystem>("StressSystem");
   const DofMap &stress_dof_map = stress_system.get_dof_map();
 
-
   ExplicitSystem &pmono_system = es.get_system<ExplicitSystem>("pMonoSystem");
   const DofMap &pmono_dof_map = pmono_system.get_dof_map();
   unsigned int pmono_var;
@@ -709,7 +787,8 @@ void HyperElasticModel::compute_pext(EquationSystems & es)
   const MeshBase::const_element_iterator end_el =
       mesh.active_local_elements_end();
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     fe->reinit(elem);
@@ -744,14 +823,14 @@ void HyperElasticModel::compute_pext(EquationSystems & es)
     pext_cur += stress_system.current_solution(stress_dof_indices_var[0]);
 #endif
 
-    pext_cur *= (-1.0/3.0);
+    pext_cur *= (-1.0 / 3.0);
 
     pmono_dof_map.dof_indices(elem, pmono_dof_indices_var, 0);
 
     pext_cur += pmono_system.current_solution(pmono_dof_indices_var[0]);
 
     pext_dof_map.dof_indices(elem, pext_dof_indices_var, 0);
-    pext_system.solution->set(pext_dof_indices_var[0],pext_cur);
+    pext_system.solution->set(pext_dof_indices_var[0], pext_cur);
   }
 
   // Should call close and update when we set vector entries directly
