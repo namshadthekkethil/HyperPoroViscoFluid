@@ -1,0 +1,115 @@
+mesh_file_name =  LVtrunk_heart_real_Lee_coupl.xda // LVtrunk_heart_exodusII_Lee_new.e // LVtrunk_heart_exodusII.e // LVtrunk_heart_exodusII_Lee_new.e // cell_2d_0_5_20.unv //cell_2d_2_5_5000.unv //../../../mesh_files/boys_cube_2d_0_5.unv
+fibre_file_name = fiberDir_Lee_coupl.txt // fiberDir_Lee_new.txt // fibreDir.txt //fibreDirBoyce.txt //fibreDir_Lee.txt //fibreDir.txt //fibreDir_benchmark.txt
+sheet_file_name = sheetDir_Lee_coupl.txt // fiberDir_Lee_new.txt //sheetDir.txt //sheetDir_Lee.txt
+mesh_scale = 0.1 // 1.0 //0.1
+mesh_centre = 1
+mesh_dim = 3 //2
+
+dt = 0.001 //0.000125 // 0.0002// 0.000125 //0.001 //0.001
+
+output_terminal = 1
+
+rho_s = 1.0 //1.0e-9 //1.0
+
+inertia = 1 //2 //2
+damping_on = 0 //1
+damping = 0 //4.0087
+
+incomp_type = 0 //1
+
+trans_soln = 1
+darcy_solver = 0
+
+porous = 0
+
+approx_order = FIRST
+fe_family = LAGRANGE
+
+active_tension = 1 //2
+
+Jm23_on = 1
+
+jphi_implicit = 1
+
+pressure_current = 1
+
+prssr_loading = 0
+
+
+alpha_stab = 0.002 // 0.02 // 0.028 //0.0 //0.01 //0.01 //0.01 //0.00003 //0.028
+
+Ta_max = 8.426e5
+
+beta_s = 1.0e20 //193.8 //310.0 //1355.34 //310.0e2 //1355.34e6 //1.0e5 //1.1e4
+
+pressure_sys = -1.346e5 // 0.0
+t_load = 0.5 //0.4
+t_end_diastole = 0.5 //500.0 //2.0 //0.5
+
+
+nonlinear_abs_tol = 1.0e1 // 1.0e0 //1.e-12
+nonlinear_rel_tol = 1.e-6
+nonlinear_max_its = 100
+
+n_solves = 800 //100 //250 //250 // 5000
+n_total = 800
+
+time_per = 0.8
+
+
+//clamp_x_bcs = '2 3'
+//clamp_y_bcs = '1'
+clamp_z_bcs = '4098'
+
+//force_x_bcs = '2 3'
+//force_y_bcs = '3'
+//force_z_bcs = '4'
+
+//force_x_values = '2 3'
+//force_y_values = '-200.0'
+//force_z_values = '4'
+
+pressure_bcs = '4097'
+pressure_values = '-1.71e4'
+
+torsion_bc = 4098
+torsion_type = 0
+torsion_value = 0.0
+
+//m_bcs = '1 2'
+//m_values = '0.2 0.0'
+
+aHO =  2244.87
+bHO = 1.6215
+afHO = 2.4267e4 // 10000.0 //2.4267e4
+bfHO = 1.8268
+asHO = 5562.38
+bsHO = 0.7746
+afsHO = 3905.16
+bfsHO = 1.695
+
+C_mod = 1.0e5 //1.0e5 //2.0e4
+bf = 1.0 //8.0 //1.0
+bt = 1.0 //2.0 //1.0
+bfs = 1.0 //4.0 //1.0
+
+strain_model = 1 //2
+
+pmat_type = 1
+
+epsilon = 0.001
+
+ppore_penalty_on = 1
+phi_0 = 0.06
+phi_crit = 0.005 //0.001
+source_const = 3.0e-6
+source_prssr = 2.7e4
+sink_const = 0.0 // 3.0e-6
+sink_prssr = 0.0 // 1.3e4
+biot_modulus = 2.18e6
+kappa_0 = 1.0e10 //0.1
+permeability = 1.0 // 2.0e-6
+
+q1 = 0.022e4
+q2 = 1.009e4
+q3 = 80.0
