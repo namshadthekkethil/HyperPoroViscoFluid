@@ -183,7 +183,7 @@ public:
   static double PInlet(double time_v);
   static double POutlet(double time_v, int n);
   static double PDrain(double time_v);
-  static double PExt();
+  static double PExt(int n);
   static void compute_pext(double time_v);
 
   static void updateImpedance();

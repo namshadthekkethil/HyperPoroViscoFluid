@@ -1322,7 +1322,7 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
 
                     double sqrt_At_cur =
                         sqrt(A0_cur) +
-                        A0bybeta * ((POutlet(ttime,elem_id) - PExt()) +
+                        A0bybeta * ((POutlet(ttime,elem_id) - PExt(elem_id)) +
                                     sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                         system.current_solution(dof_indices_u[1]));
 
@@ -2222,7 +2222,7 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                     double A0bybeta = A0_cur / vessels[elem_id].beta;
                     double At_cur = pow(
                         sqrt(A0_cur) +
-                            A0bybeta * ((POutlet(ttime,elem_id) - PExt()) +
+                            A0bybeta * ((POutlet(ttime,elem_id) - PExt(elem_id)) +
                                         sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                             system.current_solution(dof_indices_u[1])),
                         2);
@@ -2824,7 +2824,7 @@ double VesselFlow::d2pofA(double A_cur)
         return (1.5 * 0.5 * pow(A_cur, -0.5));
 }
 
-double VesselFlow::PExt()
+double VesselFlow::PExt(int n)
 {
     double pext_cur = 0.0;
 
@@ -2904,18 +2904,28 @@ double VesselFlow::PExt()
         pext_cur *= 0.13332;
     }
 
+    else if(pext_type == 10)
+    {
+        if(vessels[n].e_near == -10)
+            pext_cur = 0.0;
+        else
+            pext_cur = pext_vec[vessels[n].e_near];
+
+        pext_cur *= 0.0001;
+    }
+
     return pext_cur;
 }
 
 void VesselFlow::compute_pext(double time_v)
 {
-    double pext_cur = PExt();
+    double pext_cur = 0.0;
 
     for (int n = 0; n < vessels.size(); n++)
     {
         if (vessels[n].inside == 1)
         {
-            vessels[n].pext = pext_cur;
+            vessels[n].pext = PExt(n);
         }
         else
             vessels[n].pext = 0.0;
