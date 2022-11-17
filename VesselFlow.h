@@ -89,13 +89,14 @@
 #include <libmesh/mesh_tools.h>
 
 #include "Admittance.h"
+#include "InputParam.h"
 
 using namespace libMesh;
 using namespace std;
 
 typedef struct Vess {
   double x1, y1, z1, x2, y2, z2, bl, br, l, r, r1, r2, p1, p2, Q;
-  int p, dl, dr, nt, n1, n2, e_id;
+  int p, dl, dr, nt, n1, n2, e_id,e_near;
   int i1, i2, i3, ter, i_in, inside,ter_num;
   double beta, pext;
   double A1,A2,Q1,Q2,Q3;
@@ -103,12 +104,18 @@ typedef struct Vess {
   double A1n1,A2n1,Q1n1,Q2n1,Q3n1;
 } Vess;
 
+typedef struct MeshData {
+  double x,y,z,pext;
+  int elem_id;
+} MeshData;
+
 class VesselFlow {
 public:
   VesselFlow();
   ~VesselFlow();
 
   static Vess vess_i;
+  static vector<MeshData> mesh_data;
   static vector<Vess> vessels, vessels_in;
   static int idx, ide, ivess, vess_start, trans_soln,restart,restart_part_vein;
   static double L_v, mu_v, nu_v, rho_v, alpha_0, beta_0, alpha_v, gamma_v, p_0,
@@ -130,6 +137,7 @@ public:
   static double p_diastole,p_systole;
 
   static DenseVector<double> y11, y12, y21, y22;
+  static vector<double> pext_vec;
 
 
   static void read_vessel_data(int rank, int np, LibMeshInit &init);
@@ -173,7 +181,7 @@ public:
   static double timeDer(double Q_cur, double Q_old, double Q_n1);
   static double DtimeDer();
   static double PInlet(double time_v);
-  static double POutlet(double time_v);
+  static double POutlet(double time_v, int n);
   static double PDrain(double time_v);
   static double PExt();
   static void compute_pext(double time_v);
@@ -188,6 +196,9 @@ public:
   static void update_qartvein(int rank);
   static void update_pqbound(EquationSystems & es,int rank);
   static double QInlet();
+  static void update_mesh_data(Mesh &mesh);
+  static void update_nearest_elem();
+  static void update_pext(EquationSystems & es);
 };
 
 #endif

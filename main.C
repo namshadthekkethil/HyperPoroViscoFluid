@@ -101,7 +101,7 @@
 #include "Admittance.h"
 #include "VesselFlow.h"
 
-#define FLUIDFLOW 0
+#define FLUIDFLOW 1
 
 using namespace libMesh;
 using namespace std;
@@ -123,8 +123,75 @@ double mesh_jacobian(EquationSystems &es)
   return (tau_system.solution->sum()) / (tau_system.solution->size());
 }
 
-void run_time_step(EquationSystems &es, EquationSystems &es_cur, Mesh &mesh,
-                   Mesh &mesh_cur, LargeDeformationElasticity &lde, int rank,
+
+void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
+                   LibMeshInit &init, int count_solid)
+{
+  int dt_ratio = (InputParam::dt/VesselFlow::dt);
+  int count_per = 0;
+  for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
+  {
+    VesselFlow::time_itr = count;
+    VesselFlow::ttime = count * VesselFlow::dt_v;
+
+    count_per = fmod(count, VesselFlow::N_period);
+    VesselFlow::time_itr_per = count_per;
+    VesselFlow::ttime_dim = count_per * VesselFlow::dt;
+
+    VesselFlow::n1_old(es);
+    VesselFlow::old_new(es);
+
+    auto start = high_resolution_clock::now();
+
+    VesselFlow::solve_flow(es);
+
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    cout << "time for solving=" << duration.count() << endl;
+    if (VesselFlow::venous_flow == 1)
+    {
+      auto start = high_resolution_clock::now();
+
+      VesselFlow::update_partvein(es, rank);
+
+      auto stop = high_resolution_clock::now();
+      auto duration = duration_cast<microseconds>(stop - start);
+      cout << "time taken for part=" << duration.count() << endl;
+
+      if (VesselFlow::st_tree == 1)
+      {
+        auto start = high_resolution_clock::now();
+        VesselFlow::update_qartvein(rank);
+        auto stop = high_resolution_clock::now();
+
+        auto duration = duration_cast<microseconds>(stop - start);
+        cout << "time taken for qart=" << duration.count() << endl;
+      }
+    }
+
+    cout << "count=" << count << " count_per=" << count_per << " t=" << VesselFlow::ttime << " t_per=" << count_per * VesselFlow::dt_v << " tdim=" << count * VesselFlow::dt << " tdim_per=" << VesselFlow::ttime_dim << endl;
+
+    if (((count + 1) % 500 == 0))
+    {
+      VesselFlow::writeFlowDataTime(es, count, rank);
+    }
+
+    if (((count + 1) % 10 == 0))
+    {
+
+      VesselFlow::writeFlowDataBound(es, count, rank);
+    }
+
+    if ((count + 1) % VesselFlow::N_period == 0)
+      VesselFlow::write_restart_data(es, VesselFlow::time_itr, rank);
+  }
+
+  
+
+}
+
+void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems &es_fluid, Mesh &mesh,
+                   Mesh &mesh_cur, Mesh &mesh_fluid, LargeDeformationElasticity &lde, int rank,
                    LibMeshInit &init)
 {
   ExodusII_IO exo_io(mesh);
@@ -159,7 +226,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, Mesh &mesh,
 
   #if (FLUIDFLOW == 1)
   VesselFlow::time_itr = 0;
-  VesselFlow::writeFlowDataTime(es, 0, rank);
+  VesselFlow::writeFlowDataTime(es_fluid, 0, rank);
   VesselFlow::ttime = 0.0;
   VesselFlow::ttime_dim = 0.0;
   VesselFlow::update_qartvein(rank);
@@ -169,6 +236,13 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, Mesh &mesh,
 
   for (unsigned int count = 1; count < InputParam::n_total; count++)
   {
+    #if(FLUIDFLOW == 1)
+    HyperElasticModel::compute_pext(es);
+    VesselFlow::update_pext(es);
+
+    run_time_step_fluid(es_fluid, mesh_fluid, rank, init,count);
+    #endif
+
     count_per = fmod(count, InputParam::n_solves);
     InputParam::ttime = count_per*InputParam::dt;
 
@@ -204,7 +278,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, Mesh &mesh,
       lde.compute_J();
       lde.compute_pmono();
 
-      HyperElasticModel::compute_pext(es);
+      //HyperElasticModel::compute_pext(es);
 
       HyperElasticModel::update_total_velocity_displacement(es);
       HyperElasticModel::compute_Jtot(es);
@@ -213,6 +287,10 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, Mesh &mesh,
       exo_io.write_timestep(out_frame, es, count_write, InputParam::ttime);
     }
   }
+
+  #if(FLUIDFLOW == 1)
+  VesselFlow::write_restart_data(es_fluid, VesselFlow::time_itr, rank);
+  #endif
 }
 
 void solve_systems(LibMeshInit &init, int rank, int np)
@@ -225,12 +303,15 @@ void solve_systems(LibMeshInit &init, int rank, int np)
   write_input();
 
   Mesh mesh(init.comm());
+  Mesh mesh_temp(init.comm());
   Mesh mesh_cur(init.comm());
+  Mesh mesh_fluid(init.comm());
 
 #if (FLUIDFLOW == 1)
-  Mesh mesh_fluid(init.comm());
   VesselFlow::initialise_1Dflow(mesh_fluid, rank, np, init);
   mesh_fluid.print_info();
+  VesselFlow::update_mesh_data(mesh_temp);
+  VesselFlow::update_nearest_elem();
 #endif
 
   InputParam::read_mesh(mesh);
@@ -239,9 +320,9 @@ void solve_systems(LibMeshInit &init, int rank, int np)
 
   EquationSystems equation_systems(mesh);
   EquationSystems equation_systems_cur(mesh_cur);
+  EquationSystems equation_systems_fluid(mesh_fluid);
 
 #if (FLUIDFLOW == 1)
-  EquationSystems equation_systems_fluid(mesh_fluid);
   VesselFlow::define_systems(equation_systems_fluid);
 #endif
 
@@ -262,8 +343,18 @@ void solve_systems(LibMeshInit &init, int rank, int np)
 
 #if (FLUIDFLOW == 1)
   equation_systems_fluid.init();
+#endif
+
+HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
+  if (InputParam::porous == 1)
+    PoroElastic::initialise_poroelastic(equation_systems);
+  lde.pre_solve();
+
+#if (FLUIDFLOW == 1)
   equation_systems_fluid.parameters.set<unsigned int>(
       "nonlinear solver maximum iterations") = 100;
+
+  VesselFlow::initialise_flow_data(equation_systems_fluid);
 
   LinearImplicitSystem &flow_system =
       equation_systems_fluid.get_system<LinearImplicitSystem>("flowSystem");
@@ -271,12 +362,9 @@ void solve_systems(LibMeshInit &init, int rank, int np)
                MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 #endif
 
-  HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
-  if (InputParam::porous == 1)
-    PoroElastic::initialise_poroelastic(equation_systems);
-  lde.pre_solve();
-  run_time_step(equation_systems, equation_systems_cur, mesh, mesh_cur, lde,
-                rank,init);
+  
+  run_time_step(equation_systems, equation_systems_cur, equation_systems_fluid, 
+              mesh, mesh_cur, mesh_fluid, lde, rank,init);
 
   if (InputParam::output_terminal == 0)
     fclose(stdout);

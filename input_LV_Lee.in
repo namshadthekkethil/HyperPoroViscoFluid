@@ -5,7 +5,7 @@ mesh_scale = 0.1 // 1.0 //0.1
 mesh_centre = 1
 mesh_dim = 3 //2
 
-dt = 0.001 //0.000125 // 0.0002// 0.000125 //0.001 //0.001
+dt = 0.000976562 // 0.001 //0.000125 // 0.0002// 0.000125 //0.001 //0.001
 
 output_terminal = 1
 
@@ -51,8 +51,8 @@ nonlinear_abs_tol = 1.0e1 // 1.0e0 //1.e-12
 nonlinear_rel_tol = 1.e-6
 nonlinear_max_its = 100
 
-n_solves = 800 //100 //250 //250 // 5000
-n_total = 800
+n_solves = 819 //100 //250 //250 // 5000
+n_total = 3276
 
 time_per = 0.8
 

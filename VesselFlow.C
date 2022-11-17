@@ -8,6 +8,9 @@ using namespace std;
 
 Vess VesselFlow::vess_i;
 vector<Vess> VesselFlow::vessels, VesselFlow::vessels_in;
+
+vector<MeshData> VesselFlow::mesh_data;
+
 int VesselFlow::idx, VesselFlow::ide, VesselFlow::ivess, VesselFlow::vess_start,
     VesselFlow::trans_soln, VesselFlow::restart, VesselFlow::restart_part_vein;
 
@@ -26,6 +29,8 @@ int VesselFlow::beta_type, VesselFlow::pin_type, VesselFlow::pout_type,
     VesselFlow::wave_type, VesselFlow::pext_type, VesselFlow::venous_flow, VesselFlow::st_tree;
 
 DenseVector<DenseVector<double>> VesselFlow::pLt, VesselFlow::pRt;
+
+vector<double> VesselFlow::pext_vec;
 
 double VesselFlow::t_load, VesselFlow::time_per;
 double VesselFlow::gamma_perm;
@@ -241,6 +246,82 @@ void VesselFlow::update_vessels()
     }
 
     writeUpdatedVessels();
+}
+
+void VesselFlow::update_mesh_data(Mesh &mesh)
+{
+    mesh.allow_renumbering(false);
+    mesh.read(InputParam::mesh_file_name, NULL);
+
+    MeshBase::const_element_iterator el = mesh.active_elements_begin();
+    const MeshBase::const_element_iterator end_el =
+        mesh.active_elements_end();
+
+    for (; el != end_el; ++el)
+    {
+        const Elem *elem = *el;
+
+        const auto elem_id = elem->id();
+
+        Point X_cent = elem->centroid();
+
+        MeshData mesh_data_e;
+        mesh_data_e.elem_id = elem_id;
+        mesh_data_e.x = X_cent(0);
+        mesh_data_e.y = X_cent(1);
+        mesh_data_e.z = X_cent(2);
+        mesh_data_e.pext = 0.0;
+
+        mesh_data.push_back(mesh_data_e);
+    }
+}
+
+void VesselFlow::update_nearest_elem()
+{
+    for (int i = 0; i < vessels_in.size(); i++)
+    {
+
+        if (vessels[i].inside == 1)
+        {
+            double dist_min = 0.0;
+            int j_min = 0;
+            for (int j = 0; j < mesh_data.size(); j++)
+            {   
+                double dist_j = pow(0.5*(vessels[i].x1+vessels[i].x2)-mesh_data[j].x,2)+
+                                pow(0.5*(vessels[i].y1+vessels[i].y2)-mesh_data[j].y,2)+
+                                pow(0.5*(vessels[i].z1+vessels[i].z2)-mesh_data[j].z,2);
+
+                if(dist_j < dist_min)
+                {
+                    dist_min = dist_j;
+                    j_min = j;
+                }
+            }
+
+            vessels_in[i].e_near = j_min;
+            vessels[i].e_near = j_min;
+            if(venous_flow == 1)
+                vessels[i+vessels_in.size()].e_near = j_min;
+        }
+        else
+        {
+            vessels_in[i].e_near = -10;
+            vessels[i].e_near = -10;
+            if(venous_flow == 1)
+                vessels[i+vessels_in.size()].e_near = -10;
+        }
+    }
+}
+
+void VesselFlow::update_pext(EquationSystems & es)
+{
+    ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pExtSystem");
+
+    NumericVector<double> &pext_data = *(pext_system.current_local_solution);
+    pext_data.close();
+
+    pext_vec.resize(0);
+    pext_data.localize(pext_vec);
 }
 
 void VesselFlow::update_beta()
@@ -1241,7 +1322,7 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
 
                     double sqrt_At_cur =
                         sqrt(A0_cur) +
-                        A0bybeta * ((POutlet(ttime) - PExt()) +
+                        A0bybeta * ((POutlet(ttime,elem_id) - PExt()) +
                                     sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                         system.current_solution(dof_indices_u[1]));
 
@@ -2141,7 +2222,7 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                     double A0bybeta = A0_cur / vessels[elem_id].beta;
                     double At_cur = pow(
                         sqrt(A0_cur) +
-                            A0bybeta * ((POutlet(ttime) - PExt()) +
+                            A0bybeta * ((POutlet(ttime,elem_id) - PExt()) +
                                         sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                             system.current_solution(dof_indices_u[1])),
                         2);
@@ -2909,7 +2990,7 @@ double VesselFlow::PInlet(double time_v)
         else if (ttime_dim < 0.7)
             p_inlet = 70.712 + (132.59 - 70.712) * (1 - exp(-(pow(ttime_dim - 0.55, 2)) / 0.004));
         else
-            p_inlet = 101.776+(132.53-101.776) * (1 - exp(-(pow(0.8 - (ttime_dim), 2)) / 0.0005));
+            p_inlet = 101.776 + (132.53 - 101.776) * (1 - exp(-(pow(0.8 - (ttime_dim), 2)) / 0.0005));
 
         p_inlet *= 0.13332;
     }
@@ -2917,7 +2998,7 @@ double VesselFlow::PInlet(double time_v)
     return p_inlet;
 }
 
-double VesselFlow::POutlet(double time_v)
+double VesselFlow::POutlet(double time_v, int n)
 {
     double t_c = sqrt(rho_v / p_0) * L_v;
     double p_outlet = 0.0;
@@ -2999,6 +3080,16 @@ double VesselFlow::POutlet(double time_v)
         p_outlet *= 0.13332;
     }
 
+    else if(pout_type == 10)
+    {
+        if(vessels[n].e_near == -10)
+            p_outlet = 0.0;
+        else
+            p_outlet = pext_vec[vessels[n].e_near];
+
+        p_outlet *= 0.0001;
+    }
+
     return p_outlet;
 }
 
@@ -3030,7 +3121,7 @@ double VesselFlow::AOutlet(double time_v, int n)
 {
     double A0_outlet = M_PI * pow(vessels[n].r, 2);
     double AOut = pow(
-        ((POutlet(time_v) * A0_outlet) / vessels[0].beta) + sqrt(A0_outlet), 2);
+        ((POutlet(time_v,n) * A0_outlet) / vessels[0].beta) + sqrt(A0_outlet), 2);
 
     return AOut;
 }
@@ -3050,7 +3141,7 @@ double VesselFlow::QInlet()
     else
         qin_cur = -1560149.0 * pow(ttime_dim, 2) + 2517185.0 * ttime_dim - 1009693.0;
 
-    return qin_cur/(sqrt(p_0 / rho_v) * L_v * L_v);
+    return qin_cur / (sqrt(p_0 / rho_v) * L_v * L_v);
 }
 
 void VesselFlow::writeUpdatedVessels()

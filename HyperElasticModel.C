@@ -765,20 +765,8 @@ void HyperElasticModel::compute_pext(EquationSystems &es)
   ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pExtSystem");
   const DofMap &pext_dof_map = pext_system.get_dof_map();
 
-  // Also, get a reference to the ExplicitSystem
-  ExplicitSystem &stress_system = es.get_system<ExplicitSystem>("StressSystem");
-  const DofMap &stress_dof_map = stress_system.get_dof_map();
-
-  ExplicitSystem &pmono_system = es.get_system<ExplicitSystem>("pMonoSystem");
-  const DofMap &pmono_dof_map = pmono_system.get_dof_map();
-  unsigned int pmono_var;
-  pmono_var = pmono_system.variable_number("pressureMono");
-
   std::vector<dof_id_type> pext_dof_indices_var;
-  std::vector<dof_id_type> pmono_dof_indices_var;
 
-  // Storage for the stress dof indices on each element
-  std::vector<dof_id_type> stress_dof_indices_var;
 
   // To store the stress tensor on each element
   DenseMatrix<Number> elem_avg_stress_tensor(dim, dim);
@@ -796,7 +784,10 @@ void HyperElasticModel::compute_pext(EquationSystems &es)
     // clear the stress tensor
     elem_avg_stress_tensor.resize(dim, dim);
 
-    elem_avg_stress_tensor.add(1.0, HOModel::S);
+    GeomPar::compute_geoPar(es, elem, 0, phi, dphi);
+    compute_PK2(es,elem);
+
+    elem_avg_stress_tensor.add(1.0, S);
 
     elem_avg_stress_tensor.scale(1. / GeomPar::detF);
     elem_avg_stress_tensor.left_multiply(GeomPar::F);
@@ -804,30 +795,11 @@ void HyperElasticModel::compute_pext(EquationSystems &es)
 
     double pext_cur = 0.0;
 
-#if (MESH_DIMENSION == 2)
-    stress_dof_map.dof_indices(elem, stress_dof_indices_var, 0);
-    pext_cur += stress_system.current_solution(stress_dof_indices_var[0]);
-
-    stress_dof_map.dof_indices(elem, stress_dof_indices_var, 2);
-    pext_cur += stress_system.current_solution(stress_dof_indices_var[0]);
-#endif
-
-#if (MESH_DIMENSION == 3)
-    stress_dof_map.dof_indices(elem, stress_dof_indices_var, 0);
-    pext_cur += stress_system.current_solution(stress_dof_indices_var[0]);
-
-    stress_dof_map.dof_indices(elem, stress_dof_indices_var, 3);
-    pext_cur += stress_system.current_solution(stress_dof_indices_var[0]);
-
-    stress_dof_map.dof_indices(elem, stress_dof_indices_var, 5);
-    pext_cur += stress_system.current_solution(stress_dof_indices_var[0]);
-#endif
-
-    pext_cur *= (-1.0 / 3.0);
-
-    pmono_dof_map.dof_indices(elem, pmono_dof_indices_var, 0);
-
-    pext_cur += pmono_system.current_solution(pmono_dof_indices_var[0]);
+    #if(MESH_DIMENSION == 2)
+    pext_cur = (-1.0 / 2.0)*(elem_avg_stress_tensor(0,0)+elem_avg_stress_tensor(1,1));
+    #elif(MESH_DIMENSION == 3)
+    pext_cur = (-1.0 / 3.0)*(elem_avg_stress_tensor(0,0)+elem_avg_stress_tensor(1,1)+elem_avg_stress_tensor(2,2));
+    #endif
 
     pext_dof_map.dof_indices(elem, pext_dof_indices_var, 0);
     pext_system.solution->set(pext_dof_indices_var[0], pext_cur);
@@ -836,4 +808,6 @@ void HyperElasticModel::compute_pext(EquationSystems &es)
   // Should call close and update when we set vector entries directly
   pext_system.solution->close();
   pext_system.update();
+  pext_system.solution->localize(*pext_system.current_local_solution);
+
 }
