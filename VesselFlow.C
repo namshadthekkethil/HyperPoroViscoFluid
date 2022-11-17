@@ -315,7 +315,8 @@ void VesselFlow::update_nearest_elem()
 
 void VesselFlow::update_pext(EquationSystems & es)
 {
-    ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pExtSystem");
+    //ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pExtSystem");
+    ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pMonoSystem");
 
     NumericVector<double> &pext_data = *(pext_system.current_local_solution);
     pext_data.close();
