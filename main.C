@@ -127,7 +127,7 @@ double mesh_jacobian(EquationSystems &es)
 void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
                    LibMeshInit &init, int count_solid)
 {
-  int dt_ratio = (InputParam::dt/VesselFlow::dt);
+  int dt_ratio = round(InputParam::dt/VesselFlow::dt);
   int count_per = 0;
   for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
   {
