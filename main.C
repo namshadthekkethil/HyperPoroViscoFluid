@@ -129,8 +129,15 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 {
   int dt_ratio = round(InputParam::dt/VesselFlow::dt);
   int count_per = 0;
-  for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
+
+  int count = VesselFlow::time_itr;
+  double start_time = count*VesselFlow::dt;
+  double end_time = start_time + InputParam::dt;
+
+  //for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
+  for (double t_itr=start_time; t_itr <= end_time; t_itr=t_itr+VesselFlow::dt)
   {
+    count++;
     VesselFlow::time_itr = count;
     VesselFlow::ttime = count * VesselFlow::dt_v;
 
