@@ -130,14 +130,13 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
   int dt_ratio = round(InputParam::dt/VesselFlow::dt);
   int count_per = 0;
 
-  int count = VesselFlow::time_itr;
+  int count = VesselFlow::time_itr+1;
   double start_time = count*VesselFlow::dt;
-  double end_time = start_time + InputParam::dt;
+  double end_time = InputParam::time_itr*InputParam::dt;
 
   //for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
   for (double t_itr=start_time; t_itr <= end_time; t_itr=t_itr+VesselFlow::dt)
   {
-    count++;
     VesselFlow::time_itr = count;
     VesselFlow::ttime = count * VesselFlow::dt_v;
 
@@ -191,6 +190,8 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 
     if ((count + 1) % VesselFlow::N_period == 0)
       VesselFlow::write_restart_data(es, VesselFlow::time_itr, rank);
+
+    count++;
   }
 
   
@@ -243,6 +244,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
   for (unsigned int count = 1; count < InputParam::n_total; count++)
   {
+    InputParam::time_itr = count;
     #if(FLUIDFLOW == 1)
     HyperElasticModel::compute_pext(es);
     VesselFlow::update_pext(es);
