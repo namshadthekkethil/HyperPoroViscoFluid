@@ -257,6 +257,7 @@ void VesselFlow::update_mesh_data(Mesh &mesh)
     const MeshBase::const_element_iterator end_el =
         mesh.active_elements_end();
 
+
     for (; el != end_el; ++el)
     {
         const Elem *elem = *el;
@@ -283,7 +284,7 @@ void VesselFlow::update_nearest_elem()
 
         if (vessels[i].inside == 1)
         {
-            double dist_min = 0.0;
+            double dist_min = 1.0e10;
             int j_min = 0;
             for (int j = 0; j < mesh_data.size(); j++)
             {   
@@ -310,6 +311,7 @@ void VesselFlow::update_nearest_elem()
             if(venous_flow == 1)
                 vessels[i+vessels_in.size()].e_near = -10;
         }
+
     }
 }
 

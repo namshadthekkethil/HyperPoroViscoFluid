@@ -30,6 +30,9 @@ double PoroElastic::coord_source[4][21990];
 DenseMatrix<double> PoroElastic::porous_data;
 DenseVector<vector<double>> PoroElastic::source_data;
 
+vector<int> PoroElastic::near_vess;
+vector<double> PoroElastic::source_vess;
+
 PoroElastic::PoroElastic() {}
 
 PoroElastic::~PoroElastic() {}
@@ -3046,4 +3049,43 @@ void PoroElastic::read_porous_data(EquationSystems &es)
 
   K_system.solution->close();
   K_system.solution->localize(*K_system.current_local_solution);
+}
+
+void PoroElastic::update_nearest_vessel(EquationSystems & es)
+{
+  const MeshBase &mesh = es.get_mesh();
+
+  MeshBase::const_element_iterator el = mesh.active_elements_begin();
+  const MeshBase::const_element_iterator end_el = mesh.active_elements_end();
+
+  near_vess.resize(mesh.n_elem());
+
+  for (int i=0;i<VesselFlow::mesh_data.size();i++)
+  {
+    double x_elem = VesselFlow::mesh_data[i].x;
+    double y_elem = VesselFlow::mesh_data[i].y;
+    #if(MESH_DIMENSION == 3)
+    double z_elem = VesselFlow::mesh_data[i].z;
+    #endif
+
+    double dist_min = 0.0;
+    int j_min = 0;
+    for (int j = 0; j < VesselFlow::vessels_in.size(); j++)
+    {
+        if (VesselFlow::vessels[i].dl == -10)
+        {
+
+          double dist_j = pow(x_elem-VesselFlow::vessels[i].x2,2)+pow(y_elem-VesselFlow::vessels[i].x2,2);
+          #if(MESH_DIMENSION == 3)
+          dist_j += pow(z_elem-VesselFlow::vessels[i].z2,2);
+          #endif
+
+          if(dist_j < dist_min)
+          {
+            dist_min = dist_j;
+            j_min = j;
+          }
+        }
+    }
+  }
 }

@@ -87,6 +87,8 @@
 
 #include "InputParam.h"
 
+#include "VesselFlow.h"
+
 // typedef struct Dcheck{
 //	double
 // D[MESH_DIMENSION][MESH_DIMENSION][MESH_DIMENSION][MESH_DIMENSION];
@@ -125,6 +127,9 @@ public:
   static DenseMatrix<double> porous_data;
   static DenseVector<vector<double>> source_data;
   static int read_source,read_tree,read_permeability;
+  static vector<int> near_vess;
+  static vector<double> source_vess;
+
 
   static void read_input(int rank);
   static void define_systems(EquationSystems &es, int rank);
@@ -193,6 +198,7 @@ public:
                             const std::string &libmesh_dbg_var(system_name));
   static void update_source(EquationSystems &es);
   static void read_porous_data(EquationSystems &es);
+  static void update_nearest_vessel(EquationSystems & es);
 };
 
 #endif
