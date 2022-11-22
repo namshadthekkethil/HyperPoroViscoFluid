@@ -2903,9 +2903,11 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
   const MeshBase::const_element_iterator end_el =
       mesh.active_local_elements_end();
 
-  for (int i = 0; i < VesselFlow::mesh_data.size(); i++)
+  for (; el != end_el; ++el)
   {
-    const Elem *elem = mesh.elem_ptr(i);
+    const Elem *elem = *el;
+
+    int i = elem->id();
 
     double x_elem = VesselFlow::mesh_data[i].x;
     double y_elem = VesselFlow::mesh_data[i].y;
@@ -2929,7 +2931,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
       sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v; 
     } */
 
-    source_cur = source_vess[near_vess[i]];
+    source_cur = source_vess[i];
 
     const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
     system_source.solution->set(dof_index_source, source_cur);
@@ -3019,7 +3021,7 @@ void PoroElastic::update_nearest_vessel()
 
     double dist_min = 1.0e10;
     int j_min = 0;
-    for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
+    for (int j = 0; j < VesselFlow::termNum.size(); j++)
     {
       int n = VesselFlow::termNum[j];
 
@@ -3031,7 +3033,7 @@ void PoroElastic::update_nearest_vessel()
         if (dist_j < dist_min)
         {
           dist_min = dist_j;
-          j_min = j;
+          j_min = n;
         }
     }
 
@@ -3049,6 +3051,9 @@ void PoroElastic::update_source_vessel(EquationSystems &es)
   NumericVector<double> &flow_data = *(system.current_local_solution);
   flow_data.close();
 
+  const unsigned int u_var = system.variable_number("QVar");
+    const unsigned int p_var = system.variable_number("pVar");
+
   vector<double> flow_vec;
   flow_data.localize(flow_vec);
 
@@ -3061,8 +3066,8 @@ void PoroElastic::update_source_vessel(EquationSystems &es)
     int n = near_vess[i];
     const Elem *elem = mesh.elem_ptr(n);
 
-    dof_map.dof_indices(elem, dof_indices_u, 0);
-    dof_map.dof_indices(elem, dof_indices_p, 1);
+    dof_map.dof_indices(elem, dof_indices_u, u_var);
+    dof_map.dof_indices(elem, dof_indices_p, p_var);
 
     source_vess[i] = flow_vec[dof_indices_u[1]]*sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
 
