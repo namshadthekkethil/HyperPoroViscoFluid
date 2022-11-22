@@ -274,10 +274,20 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
     lde.move_mesh();
 
     if (InputParam::porous == 1)
+    {
+      if(FLUIDFLOW == 1)
+      {
+        PoroElastic::update_source_vessel(es_fluid);
+        PoroElastic::update_source(es,es_fluid);
+
+      }
       PoroElastic::update_poroelastic(es);
+    }
 
     if (InputParam::porous == 1)
+    {
       PostProcess::update_postprocess(es, es_cur, rank);
+    }
 
     HyperElasticModel::update_hyperelastic_model(es);
 
@@ -370,6 +380,11 @@ HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
   MatSetOption((dynamic_cast<PetscMatrix<Number> *>(flow_system.matrix))->mat(),
                MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 #endif
+
+  if(InputParam::porous == 1 && FLUIDFLOW == 1)
+  {
+    PoroElastic::update_nearest_vessel();
+  }
 
   
   run_time_step(equation_systems, equation_systems_cur, equation_systems_fluid, 

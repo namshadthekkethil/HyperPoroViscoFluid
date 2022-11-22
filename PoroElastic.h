@@ -98,6 +98,7 @@
 using namespace libMesh;
 using namespace std;
 
+
 class PoroElastic {
 public:
   PoroElastic();
@@ -196,9 +197,10 @@ public:
   static void update_ppore(EquationSystems &es);
   static void assemble_delw(EquationSystems &es,
                             const std::string &libmesh_dbg_var(system_name));
-  static void update_source(EquationSystems &es);
+  static void update_source(EquationSystems &es, EquationSystems &es_fluid);
   static void read_porous_data(EquationSystems &es);
-  static void update_nearest_vessel(EquationSystems & es);
+  static void update_nearest_vessel();
+  static void update_source_vessel(EquationSystems &es);
 };
 
 #endif

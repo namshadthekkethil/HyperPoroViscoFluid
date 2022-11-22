@@ -79,66 +79,6 @@ void PoroElastic::read_input(int rank)
   read_source = infile("read_source", 0);
   read_tree = infile("read_tree", 0);
   read_permeability = infile("read_permeability", 0);
-
-  source_data.resize(43851);
-
-  if (rank == 0 && read_source == 1)
-  {
-    ifstream file_source;
-    file_source.open("tree_flow_data.dat");
-    // coord_source.resize(3, 1991);
-    for (int i = 0; i < 21990; i++)
-    {
-      // file_source >> coord_source(0, i) >> coord_source(1, i) >>
-      //     coord_source(2, i);
-      file_source >> coord_source[0][i] >> coord_source[1][i] >>
-          coord_source[2][i] >> coord_source[3][i];
-      // coord_source[0][i] *= InputParam::mesh_scale;
-      // coord_source[1][i] *= InputParam::mesh_scale;
-      // coord_source[2][i] *= InputParam::mesh_scale;
-      //
-      // coord_source[0][i] += -0.5 * (-3.1772 + 3.6581);
-      // coord_source[1][i] += -0.5 * (-3.0591 + 3.2769);
-      // coord_source[2][i] += -0.5 * (0.015051 + 6.0814);
-
-      // cout << "i=" << i << " " << coord_source[0][i] << " "
-      //      << coord_source[1][i] << " " << coord_source[2][i] << " "
-      //      << coord_source[3][i] << endl;
-    }
-    file_source.close();
-
-    ifstream file_source_data;
-    file_source_data.open("tree_flow_data.dat");
-    for (int i = 0; i < source_data.size(); i++)
-    {
-      source_data(i).resize(4);
-      double xs = 0.0, ys = 0.0, zs = 0.0, s_cur = 0.0;
-      file_source_data >> xs >> ys >> zs >> s_cur;
-
-      source_data(i)[0] = xs;
-      source_data(i)[1] = ys;
-      source_data(i)[2] = zs;
-      source_data(i)[3] = s_cur;
-
-      source_data(i)[0] *= InputParam::mesh_scale;
-      source_data(i)[1] *= InputParam::mesh_scale;
-      source_data(i)[2] *= InputParam::mesh_scale;
-
-      source_data(i)[0] += -0.5 * (-3.1772 + 3.6581);
-      source_data(i)[1] += -0.5 * (-3.0591 + 3.2769);
-      source_data(i)[2] += -0.5 * (0.015051 + 6.0814);
-
-      // cout << "i=" << i << " " << source_data(i)[0] << " " <<
-      // source_data(i)[1]
-      //      << " " << source_data(i)[2] << " " << source_data(i)[3] << endl;
-
-      cout << "i=" << i << " " << xs << " " << ys << " " << zs << " " << s_cur
-           << endl;
-    }
-    file_source_data.close();
-  }
-
-  MPI_Bcast(&(coord_source[0][0]), 3 * 1991, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
 
 void PoroElastic::define_systems(EquationSystems &es, int rank)
@@ -2125,9 +2065,6 @@ void PoroElastic::initialise_poroelastic(EquationSystems &es)
     initialise_K(es);
   else
     read_porous_data(es);
-
-  if (read_source == 1)
-    update_source(es);
 }
 
 void PoroElastic::update_poroelastic(EquationSystems &es)
@@ -2926,8 +2863,23 @@ void PoroElastic::assemble_delw(
   }
 }
 
-void PoroElastic::update_source(EquationSystems &es)
+void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
 {
+  const MeshBase &mesh_fluid = es_fluid.get_mesh();
+
+  LinearImplicitSystem &system_fluid = es_fluid.get_system<LinearImplicitSystem>("flowSystem");
+  NumericVector<double> &flow_data = *(system_fluid.current_local_solution);
+  flow_data.close();
+
+  vector<double> flow_vec;
+  flow_data.localize(flow_vec);
+
+  const DofMap &dof_map_fluid = system_fluid.get_dof_map();
+    std::vector<dof_id_type> dof_indices_u;
+    std::vector<dof_id_type> dof_indices_p;
+
+
+
   libMesh::MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
@@ -2951,32 +2903,33 @@ void PoroElastic::update_source(EquationSystems &es)
   const MeshBase::const_element_iterator end_el =
       mesh.active_local_elements_end();
 
-  for (; el != end_el; ++el)
+  for (int i = 0; i < VesselFlow::mesh_data.size(); i++)
   {
-    const Elem *elem = *el;
+    const Elem *elem = mesh.elem_ptr(i);
 
-    fe_vel->reinit(elem);
-
-    Point x_elem;
-    x_elem = Xref[0];
-
+    double x_elem = VesselFlow::mesh_data[i].x;
+    double y_elem = VesselFlow::mesh_data[i].y;
+#if (MESH_DIMENSION == 3)
+    double z_elem = VesselFlow::mesh_data[i].z;
+#endif
     double source_cur = 0.0;
 
-    for (unsigned int ii = 0; ii < 1991; ii++)
+   /*  for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
     {
-      // double dist_2 = pow(x_elem(0) - coord_source[0][ii], 2) +
-      //                 pow(x_elem(1) - coord_source[1][ii], 2) +
-      //                 pow(x_elem(2) - coord_source[2][ii], 2);
+      int n = VesselFlow::termNum[j];
+      const Elem *elem_fluid = mesh_fluid.elem_ptr(n);
 
-      double dist_2 = pow(x_elem(0) - source_data(ii)[0], 2) +
-                      pow(x_elem(1) - source_data(ii)[1], 2) +
-                      pow(x_elem(2) - source_data(ii)[2], 2);
-      source_cur += a_const * exp(b_const * (dist_2)) * source_data(ii)[3];
-    }
+      dof_map_fluid.dof_indices(elem_fluid, dof_indices_u, 0);
+      dof_map_fluid.dof_indices(elem_fluid, dof_indices_p, 1);
 
-    // if (sqrt(pow(x_elem(0) - 2.74368, 2) + pow(x_elem(1) - 1.18394, 2) +
-    //          pow(x_elem(2) - 0.945994, 2)) < 1.0)
-    //   source_cur = 0.0;
+      double dist_2 = pow(x_elem - VesselFlow::vessels_in[n].x2, 2) +
+                      pow(y_elem - VesselFlow::vessels_in[n].y2, 2) +
+                      pow(z_elem - VesselFlow::vessels_in[n].z2, 2);
+       source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]]*
+      sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v; 
+    } */
+
+    source_cur = source_vess[near_vess[i]];
 
     const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
     system_source.solution->set(dof_index_source, source_cur);
@@ -3051,41 +3004,77 @@ void PoroElastic::read_porous_data(EquationSystems &es)
   K_system.solution->localize(*K_system.current_local_solution);
 }
 
-void PoroElastic::update_nearest_vessel(EquationSystems & es)
+void PoroElastic::update_nearest_vessel()
 {
-  const MeshBase &mesh = es.get_mesh();
 
-  MeshBase::const_element_iterator el = mesh.active_elements_begin();
-  const MeshBase::const_element_iterator end_el = mesh.active_elements_end();
+  near_vess.resize(VesselFlow::mesh_data.size());
 
-  near_vess.resize(mesh.n_elem());
-
-  for (int i=0;i<VesselFlow::mesh_data.size();i++)
+  for (int i = 0; i < VesselFlow::mesh_data.size(); i++)
   {
     double x_elem = VesselFlow::mesh_data[i].x;
     double y_elem = VesselFlow::mesh_data[i].y;
-    #if(MESH_DIMENSION == 3)
+#if (MESH_DIMENSION == 3)
     double z_elem = VesselFlow::mesh_data[i].z;
-    #endif
+#endif
 
-    double dist_min = 0.0;
+    double dist_min = 1.0e10;
     int j_min = 0;
-    for (int j = 0; j < VesselFlow::vessels_in.size(); j++)
+    for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
     {
-        if (VesselFlow::vessels[i].dl == -10)
+      int n = VesselFlow::termNum[j];
+
+        double dist_j = pow(x_elem - VesselFlow::vessels[n].x2, 2) + pow(y_elem - VesselFlow::vessels[n].y2, 2);
+#if (MESH_DIMENSION == 3)
+        dist_j += pow(z_elem - VesselFlow::vessels[n].z2, 2);
+#endif
+
+        if (dist_j < dist_min)
         {
-
-          double dist_j = pow(x_elem-VesselFlow::vessels[i].x2,2)+pow(y_elem-VesselFlow::vessels[i].x2,2);
-          #if(MESH_DIMENSION == 3)
-          dist_j += pow(z_elem-VesselFlow::vessels[i].z2,2);
-          #endif
-
-          if(dist_j < dist_min)
-          {
-            dist_min = dist_j;
-            j_min = j;
-          }
+          dist_min = dist_j;
+          j_min = j;
         }
+    }
+
+    near_vess[i] = j_min;
+  }
+}
+
+void PoroElastic::update_source_vessel(EquationSystems &es)
+{
+  source_vess.resize(VesselFlow::mesh_data.size());
+
+  const MeshBase &mesh = es.get_mesh();
+
+  LinearImplicitSystem &system = es.get_system<LinearImplicitSystem>("flowSystem");
+  NumericVector<double> &flow_data = *(system.current_local_solution);
+  flow_data.close();
+
+  vector<double> flow_vec;
+  flow_data.localize(flow_vec);
+
+  const DofMap &dof_map = system.get_dof_map();
+    std::vector<dof_id_type> dof_indices_u;
+    std::vector<dof_id_type> dof_indices_p;
+
+  for (int i = 0; i < VesselFlow::mesh_data.size(); i++)
+  {
+    int n = near_vess[i];
+    const Elem *elem = mesh.elem_ptr(n);
+
+    dof_map.dof_indices(elem, dof_indices_u, 0);
+    dof_map.dof_indices(elem, dof_indices_p, 1);
+
+    source_vess[i] = flow_vec[dof_indices_u[1]]*sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
+
+    if(VesselFlow::venous_flow == 1)
+    {
+      int n = near_vess[i]+VesselFlow::vessels_in.size();
+      const Elem *elem = mesh.elem_ptr(n);
+
+      dof_map.dof_indices(elem, dof_indices_u, 0);
+      dof_map.dof_indices(elem, dof_indices_p, 1);
+
+      source_vess[i] += flow_vec[dof_indices_u[1]]*sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
     }
   }
 }
