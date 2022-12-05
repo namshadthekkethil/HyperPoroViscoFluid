@@ -2061,6 +2061,7 @@ void PoroElastic::compute_mmono(EquationSystems &es)
 
 void PoroElastic::initialise_poroelastic(EquationSystems &es)
 {
+  compute_mesh_volume(es);
   if (read_permeability == 0)
     initialise_K(es);
   else
@@ -2887,7 +2888,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
   unsigned int u_var = system_source.variable_number("sourceVar");
   unsigned int system_source_num = system_source.number();
 
-  double sigma_g = 0.1;
+  double sigma_g = 5.0;
 
   double a_const = 1.0 / (sigma_g * sqrt(2.0 * M_PI));
   double b_const = -1.0 / (2 * sigma_g * sigma_g);
@@ -2916,7 +2917,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
 #endif
     double source_cur = 0.0;
 
-   /*  for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
+     for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
     {
       int n = VesselFlow::termNum[j];
       const Elem *elem_fluid = mesh_fluid.elem_ptr(n);
@@ -2928,10 +2929,17 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
                       pow(y_elem - VesselFlow::vessels_in[n].y2, 2) +
                       pow(z_elem - VesselFlow::vessels_in[n].z2, 2);
        source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]]*
-      sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v; 
-    } */
+      sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v*(1.0e-3/mesh_volume); 
 
-    source_cur = source_vess[i];
+      //if(i==0)
+      //cout<<"i="<<i<<" j="<<j<<" "<<a_const<<" "<<b_const<<" "<<a_const * exp(b_const * (dist_2))<<" "<<dist_2<<endl;
+
+    } 
+
+    //source_cur = source_vess[i];
+    //source_cur = near_vess[i];
+
+    //cout<<i<<" "<<VesselFlow::mesh_data[i].elem_id<<endl;
 
     const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
     system_source.solution->set(dof_index_source, source_cur);
