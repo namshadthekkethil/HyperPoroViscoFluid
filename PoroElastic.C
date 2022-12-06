@@ -2864,7 +2864,7 @@ void PoroElastic::assemble_delw(
   }
 }
 
-void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
+void PoroElastic::update_source(EquationSystems &es, EquationSystems &es_fluid)
 {
   const MeshBase &mesh_fluid = es_fluid.get_mesh();
 
@@ -2876,10 +2876,8 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
   flow_data.localize(flow_vec);
 
   const DofMap &dof_map_fluid = system_fluid.get_dof_map();
-    std::vector<dof_id_type> dof_indices_u;
-    std::vector<dof_id_type> dof_indices_p;
-
-
+  std::vector<dof_id_type> dof_indices_u;
+  std::vector<dof_id_type> dof_indices_p;
 
   libMesh::MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
@@ -2917,7 +2915,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
 #endif
     double source_cur = 0.0;
 
-     for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
+    for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
     {
       int n = VesselFlow::termNum[j];
       const Elem *elem_fluid = mesh_fluid.elem_ptr(n);
@@ -2928,18 +2926,28 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems & es_fluid)
       double dist_2 = pow(x_elem - VesselFlow::vessels_in[n].x2, 2) +
                       pow(y_elem - VesselFlow::vessels_in[n].y2, 2) +
                       pow(z_elem - VesselFlow::vessels_in[n].z2, 2);
-       source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]]*
-      sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v*(1.0e-3/mesh_volume); 
+      source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]] *
+                    sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v * (1.0e-3 / mesh_volume);
 
-      //if(i==0)
-      //cout<<"i="<<i<<" j="<<j<<" "<<a_const<<" "<<b_const<<" "<<a_const * exp(b_const * (dist_2))<<" "<<dist_2<<endl;
+      if (VesselFlow::venous_flow == 1)
+      {
+        const Elem *elem_fluid_v = mesh_fluid.elem_ptr(n + VesselFlow::vessels_in.size());
 
-    } 
+        dof_map_fluid.dof_indices(elem_fluid_v, dof_indices_u, 0);
+        dof_map_fluid.dof_indices(elem_fluid_v, dof_indices_p, 1);
 
-    //source_cur = source_vess[i];
-    //source_cur = near_vess[i];
+        source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]] *
+                      sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v * (1.0e-3 / mesh_volume);
+      }
 
-    //cout<<i<<" "<<VesselFlow::mesh_data[i].elem_id<<endl;
+      // if(i==0)
+      // cout<<"i="<<i<<" j="<<j<<" "<<a_const<<" "<<b_const<<" "<<a_const * exp(b_const * (dist_2))<<" "<<dist_2<<endl;
+    }
+
+    // source_cur = source_vess[i];
+    // source_cur = near_vess[i];
+
+    // cout<<i<<" "<<VesselFlow::mesh_data[i].elem_id<<endl;
 
     const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
     system_source.solution->set(dof_index_source, source_cur);
@@ -3033,16 +3041,16 @@ void PoroElastic::update_nearest_vessel()
     {
       int n = VesselFlow::termNum[j];
 
-        double dist_j = pow(x_elem - VesselFlow::vessels[n].x2, 2) + pow(y_elem - VesselFlow::vessels[n].y2, 2);
+      double dist_j = pow(x_elem - VesselFlow::vessels[n].x2, 2) + pow(y_elem - VesselFlow::vessels[n].y2, 2);
 #if (MESH_DIMENSION == 3)
-        dist_j += pow(z_elem - VesselFlow::vessels[n].z2, 2);
+      dist_j += pow(z_elem - VesselFlow::vessels[n].z2, 2);
 #endif
 
-        if (dist_j < dist_min)
-        {
-          dist_min = dist_j;
-          j_min = n;
-        }
+      if (dist_j < dist_min)
+      {
+        dist_min = dist_j;
+        j_min = n;
+      }
     }
 
     near_vess[i] = j_min;
@@ -3060,14 +3068,14 @@ void PoroElastic::update_source_vessel(EquationSystems &es)
   flow_data.close();
 
   const unsigned int u_var = system.variable_number("QVar");
-    const unsigned int p_var = system.variable_number("pVar");
+  const unsigned int p_var = system.variable_number("pVar");
 
   vector<double> flow_vec;
   flow_data.localize(flow_vec);
 
   const DofMap &dof_map = system.get_dof_map();
-    std::vector<dof_id_type> dof_indices_u;
-    std::vector<dof_id_type> dof_indices_p;
+  std::vector<dof_id_type> dof_indices_u;
+  std::vector<dof_id_type> dof_indices_p;
 
   for (int i = 0; i < VesselFlow::mesh_data.size(); i++)
   {
@@ -3077,17 +3085,17 @@ void PoroElastic::update_source_vessel(EquationSystems &es)
     dof_map.dof_indices(elem, dof_indices_u, u_var);
     dof_map.dof_indices(elem, dof_indices_p, p_var);
 
-    source_vess[i] = flow_vec[dof_indices_u[1]]*sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
+    source_vess[i] = flow_vec[dof_indices_u[1]] * sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
 
-    if(VesselFlow::venous_flow == 1)
+    if (VesselFlow::venous_flow == 1)
     {
-      int n = near_vess[i]+VesselFlow::vessels_in.size();
+      int n = near_vess[i] + VesselFlow::vessels_in.size();
       const Elem *elem = mesh.elem_ptr(n);
 
       dof_map.dof_indices(elem, dof_indices_u, 0);
       dof_map.dof_indices(elem, dof_indices_p, 1);
 
-      source_vess[i] += flow_vec[dof_indices_u[1]]*sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
+      source_vess[i] += flow_vec[dof_indices_u[1]] * sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
     }
   }
 }
