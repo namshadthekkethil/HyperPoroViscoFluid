@@ -104,6 +104,9 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
   LinearImplicitSystem &system_dmdt =
       es.add_system<LinearImplicitSystem>("dmdtSystem");
 
+
+  
+
   system_pmat.add_variable("pMatVar",
                            Utility::string_to_enum<Order>(approx_order),
                            Utility::string_to_enum<FEFamily>(fe_family));
@@ -171,6 +174,9 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
   system_K.add_variable("K22", CONSTANT, MONOMIAL);
 #endif
 
+System &system_flowlarge = es.add_system<System>("flowLargeSystem");
+system_flowlarge.add_variable("flowLargeVar", CONSTANT, MONOMIAL);
+
   if (brinkman == 1)
   {
     LinearImplicitSystem &system_delw =
@@ -194,6 +200,8 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
 
     system_delw.attach_assemble_function(assemble_delw);
   }
+
+
 
   II.resize(MESH_DIMENSION, MESH_DIMENSION);
   II(0, 0) = 1.0;
@@ -2948,6 +2956,83 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems &es_fluid)
     // source_cur = near_vess[i];
 
     // cout<<i<<" "<<VesselFlow::mesh_data[i].elem_id<<endl;
+
+    const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
+    system_source.solution->set(dof_index_source, source_cur);
+  }
+
+  system_source.solution->close();
+  system_source.solution->localize(*system_source.current_local_solution);
+}
+
+void PoroElastic::update_flowlarge(EquationSystems &es, EquationSystems &es_fluid)
+{
+  const MeshBase &mesh_fluid = es_fluid.get_mesh();
+
+  LinearImplicitSystem &system_fluid = es_fluid.get_system<LinearImplicitSystem>("flowSystem");
+  NumericVector<double> &flow_data = *(system_fluid.current_local_solution);
+  flow_data.close();
+
+  vector<double> flow_vec;
+  flow_data.localize(flow_vec);
+
+  const DofMap &dof_map_fluid = system_fluid.get_dof_map();
+  std::vector<dof_id_type> dof_indices_u;
+  std::vector<dof_id_type> dof_indices_p;
+
+  libMesh::MeshBase &mesh = es.get_mesh();
+  const unsigned int dim = mesh.mesh_dimension();
+
+  System &system_source = es.get_system<System>("flowLargeSystem");
+  unsigned int u_var = system_source.variable_number("flowLargeVar");
+  unsigned int system_source_num = system_source.number();
+
+  double sigma_g = 2.0;
+
+  double a_const = 1.0 / (sigma_g * sqrt(2.0 * M_PI));
+  double b_const = -1.0 / (2 * sigma_g * sigma_g);
+
+  FEType fe_vel_type = system_source.variable_type(u_var);
+  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
+  QGauss qrule(dim, CONSTANT);
+  fe_vel->attach_quadrature_rule(&qrule);
+
+  const std::vector<Point> &Xref = fe_vel->get_xyz();
+
+  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+  const MeshBase::const_element_iterator end_el =
+      mesh.active_local_elements_end();
+
+  for (; el != end_el; ++el)
+  {
+    const Elem *elem = *el;
+
+    int i = elem->id();
+
+    double x_elem = VesselFlow::mesh_data[i].x;
+    double y_elem = VesselFlow::mesh_data[i].y;
+#if (MESH_DIMENSION == 3)
+    double z_elem = VesselFlow::mesh_data[i].z;
+#endif
+    double source_cur = 0.0;
+
+    for (int j = 0; j < VesselFlow::vessels_in.size(); j++)
+    {
+      int n = j;
+      const Elem *elem_fluid = mesh_fluid.elem_ptr(n);
+
+      dof_map_fluid.dof_indices(elem_fluid, dof_indices_u, 0);
+      dof_map_fluid.dof_indices(elem_fluid, dof_indices_p, 1);
+
+      double dist_2 = pow(x_elem - VesselFlow::vessels_in[n].x2, 2) +
+                      pow(y_elem - VesselFlow::vessels_in[n].y2, 2) +
+                      pow(z_elem - VesselFlow::vessels_in[n].z2, 2);
+      source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]] *
+                    sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v * (1.0e-3 / mesh_volume);
+
+      // if(i==0)
+      // cout<<"i="<<i<<" j="<<j<<" "<<a_const<<" "<<b_const<<" "<<a_const * exp(b_const * (dist_2))<<" "<<dist_2<<endl;
+    }
 
     const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
     system_source.solution->set(dof_index_source, source_cur);
