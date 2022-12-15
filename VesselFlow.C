@@ -257,7 +257,6 @@ void VesselFlow::update_mesh_data(Mesh &mesh)
     const MeshBase::const_element_iterator end_el =
         mesh.active_elements_end();
 
-
     for (; el != end_el; ++el)
     {
         const Elem *elem = *el;
@@ -287,12 +286,12 @@ void VesselFlow::update_nearest_elem()
             double dist_min = 1.0e10;
             int j_min = 0;
             for (int j = 0; j < mesh_data.size(); j++)
-            {   
-                double dist_j = pow(0.5*(vessels[i].x1+vessels[i].x2)-mesh_data[j].x,2)+
-                                pow(0.5*(vessels[i].y1+vessels[i].y2)-mesh_data[j].y,2)+
-                                pow(0.5*(vessels[i].z1+vessels[i].z2)-mesh_data[j].z,2);
+            {
+                double dist_j = pow(0.5 * (vessels[i].x1 + vessels[i].x2) - mesh_data[j].x, 2) +
+                                pow(0.5 * (vessels[i].y1 + vessels[i].y2) - mesh_data[j].y, 2) +
+                                pow(0.5 * (vessels[i].z1 + vessels[i].z2) - mesh_data[j].z, 2);
 
-                if(dist_j < dist_min)
+                if (dist_j < dist_min)
                 {
                     dist_min = dist_j;
                     j_min = j;
@@ -301,23 +300,22 @@ void VesselFlow::update_nearest_elem()
 
             vessels_in[i].e_near = j_min;
             vessels[i].e_near = j_min;
-            if(venous_flow == 1)
-                vessels[i+vessels_in.size()].e_near = j_min;
+            if (venous_flow == 1)
+                vessels[i + vessels_in.size()].e_near = j_min;
         }
         else
         {
             vessels_in[i].e_near = -10;
             vessels[i].e_near = -10;
-            if(venous_flow == 1)
-                vessels[i+vessels_in.size()].e_near = -10;
+            if (venous_flow == 1)
+                vessels[i + vessels_in.size()].e_near = -10;
         }
-
     }
 }
 
-void VesselFlow::update_pext(EquationSystems & es)
+void VesselFlow::update_pext(EquationSystems &es)
 {
-    //ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pExtSystem");
+    // ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pExtSystem");
     ExplicitSystem &pext_system = es.get_system<ExplicitSystem>("pMonoSystem");
 
     NumericVector<double> &pext_data = *(pext_system.current_local_solution);
@@ -385,10 +383,22 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
     string out_frame;
     out_frame = name + fileend;
 
+    string file_name_art = "flow_arteries.dat";
+    string file_name_vein = "flow_vein.dat";
+    string file_name_source = "flow_source.dat";
+
+    ofstream file_art;
+    ofstream file_vein;
+    ofstream file_source;
+
     ofstream file_vess;
     if (rank == 0)
     {
         file_vess.open(out_frame, ios::out);
+        
+        file_art.open(out_frame, ios::out);
+        file_vein.open(out_frame, ios::out);
+        file_source.open(out_frame, ios::out);
     }
 }
 
@@ -1325,7 +1335,7 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
 
                     double sqrt_At_cur =
                         sqrt(A0_cur) +
-                        A0bybeta * ((POutlet(ttime,elem_id) - PExt(elem_id)) +
+                        A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
                                     sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                         system.current_solution(dof_indices_u[1]));
 
@@ -2225,7 +2235,7 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                     double A0bybeta = A0_cur / vessels[elem_id].beta;
                     double At_cur = pow(
                         sqrt(A0_cur) +
-                            A0bybeta * ((POutlet(ttime,elem_id) - PExt(elem_id)) +
+                            A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
                                         sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                             system.current_solution(dof_indices_u[1])),
                         2);
@@ -2907,9 +2917,9 @@ double VesselFlow::PExt(int n)
         pext_cur *= 0.13332;
     }
 
-    else if(pext_type == 10)
+    else if (pext_type == 10)
     {
-        if(vessels[n].e_near == -10)
+        if (vessels[n].e_near == -10)
             pext_cur = 0.0;
         else
             pext_cur = pext_vec[vessels[n].e_near];
@@ -3093,9 +3103,9 @@ double VesselFlow::POutlet(double time_v, int n)
         p_outlet *= 0.13332;
     }
 
-    else if(pout_type == 10)
+    else if (pout_type == 10)
     {
-        if(vessels[n].e_near == -10)
+        if (vessels[n].e_near == -10)
             p_outlet = 0.0;
         else
             p_outlet = pext_vec[vessels[n].e_near];
@@ -3134,7 +3144,7 @@ double VesselFlow::AOutlet(double time_v, int n)
 {
     double A0_outlet = M_PI * pow(vessels[n].r, 2);
     double AOut = pow(
-        ((POutlet(time_v,n) * A0_outlet) / vessels[0].beta) + sqrt(A0_outlet), 2);
+        ((POutlet(time_v, n) * A0_outlet) / vessels[0].beta) + sqrt(A0_outlet), 2);
 
     return AOut;
 }
@@ -3494,6 +3504,79 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
                   << qArtTotal << " " << pArtTotal << " " << qVeinTotal << " " << pVeinTotal << " "
                   << " " << qOutCur << " " << pOutCur << endl;
         file_vess.close();
+    }
+
+    const MeshBase &mesh = es.get_mesh();
+
+    LinearImplicitSystem &system =
+        es.get_system<LinearImplicitSystem>("flowSystem");
+
+    NumericVector<double> &flow_data = *(system.current_local_solution);
+    flow_data.close();
+
+    vector<double> flow_vec;
+    flow_data.localize(flow_vec);
+
+    const DofMap &dof_map = system.get_dof_map();
+    std::vector<dof_id_type> dof_indices_u;
+
+    string file_name_art = "flow_arteries.dat";
+    string file_name_vein = "flow_vein.dat";
+    string file_name_source = "flow_source.dat";
+
+    ofstream file_art;
+    ofstream file_vein;
+    ofstream file_source;
+
+    if (rank == 0)
+    {
+
+        file_art.open(file_name_art, ios::app);
+
+        file_art << ttime * sqrt(rho_v / p_0) * L_v;
+        if (venous_flow == 1)
+        {
+            file_vein.open(file_name_art, ios::app);
+            file_source.open(file_name_art, ios::app);
+
+            file_vein << ttime * sqrt(rho_v / p_0) * L_v;
+            file_source << ttime * sqrt(rho_v / p_0) * L_v;
+        }
+
+        for (int i = 0; i < pArt(0).size(); i++)
+        {
+            int n = termNum[i];
+            const Elem *elem = mesh.elem_ptr(n);
+
+            dof_map.dof_indices(elem, dof_indices_u, 0);
+            double qart_cur = flow_vec[dof_indices_u[1]] * sqrt(p_0 / rho_v) * L_v * L_v;
+
+            file_art << " " << qart_cur;
+
+            if(venous_flow == 1)
+            {
+                int n_v = termNum[i]+vessels_in.size();
+                const Elem *elem_v = mesh.elem_ptr(n_v);
+
+                dof_map.dof_indices(elem_v, dof_indices_u, 0);
+                double qvein_cur = flow_vec[dof_indices_u[1]] * sqrt(p_0 / rho_v) * L_v * L_v;
+
+                file_vein << " " << qvein_cur;
+                file_source << " " << qart_cur+qvein_cur;
+            }
+        }
+        file_art << endl;
+        file_art.close();
+
+        if (venous_flow == 1)
+        {
+            file_vein << endl;
+            file_vein.close();
+
+            file_source << endl;
+            file_source.close();
+        }
+
     }
 }
 
