@@ -396,9 +396,15 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
     {
         file_vess.open(out_frame, ios::out);
         
-        file_art.open(out_frame, ios::out);
-        file_vein.open(out_frame, ios::out);
-        file_source.open(out_frame, ios::out);
+        file_art.open(file_name_art, ios::out);
+        file_vein.open(file_name_vein, ios::out);
+        file_source.open(file_name_source, ios::out);
+
+        file_vess.close();
+        
+        file_art.close();
+        file_vein.close();
+        file_source.close();
     }
 }
 
@@ -3536,8 +3542,8 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
         file_art << ttime * sqrt(rho_v / p_0) * L_v;
         if (venous_flow == 1)
         {
-            file_vein.open(file_name_art, ios::app);
-            file_source.open(file_name_art, ios::app);
+            file_vein.open(file_name_vein, ios::app);
+            file_source.open(file_name_source, ios::app);
 
             file_vein << ttime * sqrt(rho_v / p_0) * L_v;
             file_source << ttime * sqrt(rho_v / p_0) * L_v;
