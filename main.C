@@ -86,12 +86,12 @@
 
 #include "libmesh/mesh_tetgen_interface.h"
 
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/LargeDeformationElasticity.h"
+#include "../../source_codes/FEMLDE_7/LargeDeformationElasticity.h"
 
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/GeomPar.h"
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/HOModel.h"
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/Incompress.h"
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/MeshGen.h"
+#include "../../source_codes/FEMLDE_7/GeomPar.h"
+#include "../../source_codes/FEMLDE_7/HOModel.h"
+#include "../../source_codes/FEMLDE_7/Incompress.h"
+#include "../../source_codes/FEMLDE_7/MeshGen.h"
 
 #include "BoundaryCond.h"
 #include "HyperElasticModel.h"

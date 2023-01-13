@@ -1,33 +1,78 @@
-#####################################################################
-## Here specify the location of the IBAMR source and the location
-##IBAMR_SRC_DIR = /xlwork6/heartvalve/IBAMR-2015/sfw/IBAMR
-##IBAMR_BUILD_DIR = /xlwork6/heartvalve/IBAMR-2015/sfw/IBAMR/ibamr-objs-opt
-##IBAMR_SRC_DIR = /xlwork6/2101013f/LiuyangIBAMR/IBAMR
-##IBAMR_BUILD_DIR = /xlwork6/2101013f/LiuyangIBAMR/IBAMR/ibamr-objs-opt
-##IBAMR_SRC_DIR = /xlwork6/2101013f/LiuyangIBAMR/LAE/IBAMR
-##IBAMR_BUILD_DIR = /xlwork6/2101013f/LiuyangIBAMR/LAE/IBAMR/ibamr-objs-opt
-#IBAMR_SRC_DIR =/work/e645/shared/sfw/ibamr/IBAMR
-#IBAMR_BUILD_DIR =/work/e645/shared/sfw/ibamr/ibamr-objs-opt
-IBAMR_SRC_DIR =/work/e645/shared/sfw2/ibamr_latest/IBAMR
-IBAMR_BUILD_DIR =/work/e645/shared/sfw2/ibamr_latest/ibamr-objs-opt
 ######################################################################
-## Include variables specific to the particular IBAMR build.
-include $(IBAMR_BUILD_DIR)/config/make.inc
+#
+# Template libMesh application Makefile
+LIBMESH_DIR ?= /users/qhb22212/sfw/linux/libmesh/1.6.2/1.6.2-opt
 
 
-SRC = $(wildcard *.C) $(wildcard /work/e642/e642/namshadth/source_codes/FEMLDE_7/*.C)
-PDIM = 3
-OBJS = $(SRC:%.C=%.o) $(IBAMR_LIB_3D) $(IBTK_LIB_3D)
+# include the library options determined by configure
+include $(LIBMESH_DIR)/Make.common
+
+target     := ./example-$(METHOD)
 
 
-main: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJS) $(LDFLAGS) $(LIBS) -DNDIM=$(PDIM) -o main
+###############################################################################
+# File management.  This is where the source, header, and object files are
+# defined
+
+#
+# source files
+srcfiles 	:= $(wildcard *.C) $(wildcard ../../source_codes/FEMLDE_7/*.C)
+
+#
+# object files
+objects		:= $(patsubst %.C, %.$(obj-suffix), $(srcfiles))
+###############################################################################
 
 
 
-clean:
-	$(RM) main
-	$(RM) *.o *.lo *.objs *.ii *.int.c *.mod
-	$(RM) -r .libs
+.PHONY: dust clean distclean
 
--include $(SRC:%.C=%.d)
+###############################################################################
+# Target:
+#
+
+all:: $(notdir $(target))
+
+# Production rules:  how to make the target - depends on library configuration
+$(notdir $(target)): $(objects)
+	@echo "Linking "$@"..."
+	@$(libmesh_LIBTOOL) --tag=CXX $(LIBTOOLFLAGS) --mode=link \
+	  $(libmesh_CXX) $(libmesh_CXXFLAGS) $(objects) -o $@ $(libmesh_LIBS) $(libmesh_LDFLAGS) $(EXTERNAL_FLAGS)
+
+
+# Useful rules.
+dust:
+	@echo "Deleting old output and runtime files"
+	@rm -f out*.m job_output.txt output.txt* *.gmv.* *.plt.* out*.xdr* out*.xda* PI* complete
+
+clean: dust
+	@rm -f $(objects) *.$(obj-suffix) *.lo
+
+clobber: clean 
+	@rm -f $(target)
+
+distclean: clean
+	@rm -rf *.o .libs
+
+echo:
+	@echo srcfiles = $(srcfiles)
+	@echo objects = $(objects)
+	@echo target = $(target)
+
+run: complete
+
+complete: $(wildcard *.in)
+#	@$(MAKE) dust
+	@$(MAKE) -C $(dir $(target)) $(notdir $(target))
+	@echo "***************************************************************"
+	@echo "* Running App " $(notdir $(target))
+	@echo "***************************************************************"
+	@echo " "
+	${LIBMESH_RUN} $(target) ${LIBMESH_OPTIONS} 2>&1 | tee output.txt
+	@bzip2 -f output.txt
+	@echo " "
+	@echo "***************************************************************"
+	@echo "* Done Running App " $(notdir $(target))
+	@echo "***************************************************************"
+
+###############################################################################

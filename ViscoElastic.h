@@ -57,8 +57,8 @@
 #include "libmesh/getpot.h"
 #include "libmesh/string_to_enum.h"
 
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/GeomPar.h"
-#include "/work/e642/e642/namshadth/source_codes/FEMLDE_7/MatVecOper.h"
+#include "../../source_codes/FEMLDE_7/GeomPar.h"
+#include "../../source_codes/FEMLDE_7/MatVecOper.h"
 
 #include "HyperElasticModel.h"
 
