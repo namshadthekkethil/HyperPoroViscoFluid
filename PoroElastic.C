@@ -3139,6 +3139,7 @@ void PoroElastic::update_nearest_vessel()
     }
 
     near_vess[i] = j_min;
+    
   }
 }
 
