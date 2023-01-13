@@ -43,6 +43,8 @@
 // In this example we only consider a body load (e.g. gravity), hence we set g =
 // 0.
 
+//check update on pull
+
 // C++ include files that we need
 #include <algorithm>
 #include <chrono>
