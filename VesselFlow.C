@@ -395,13 +395,13 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
     if (rank == 0)
     {
         file_vess.open(out_frame, ios::out);
-        
+
         file_art.open(file_name_art, ios::out);
         file_vein.open(file_name_vein, ios::out);
         file_source.open(file_name_source, ios::out);
 
         file_vess.close();
-        
+
         file_art.close();
         file_vein.close();
         file_source.close();
@@ -2706,17 +2706,16 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                   << ",\"l\""
                   << ",\"r1\""
                   << ",\"r2\""
-                  << ",\"p\""
-                  << ",\"dl\""
-                  << ",\"dr\""
                   << ",\"Q1\""
                   << ",\"Q2\""
                   << ",\"p1\""
                   << ",\"p2\""
-                  << ",\"Q1p\""
-                  << ",\"Q2p\""
-                  << ",\"A1p\""
-                  << ",\"A2p\"" << endl;
+                  << ",\"Q1v\""
+                  << ",\"Q2v\""
+                  << ",\"p1v\""
+                  << ",\"p2v\""
+                  << ",\"S1\""
+                  << ",\"S2\"" << endl;
     }
 
     const MeshBase &mesh = es.get_mesh();
@@ -2747,7 +2746,7 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
         MeshBase::const_element_iterator el = mesh.active_elements_begin();
         const MeshBase::const_element_iterator end_el = mesh.active_elements_end();
 
-        for (; el != end_el; ++el)
+        /* for (; el != end_el; ++el)
         {
             const Elem *elem = *el;
 
@@ -2814,6 +2813,103 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                       << "," << Q1 << "," << Q2 << "," << p1 << "," << p2 << ","
                       << Q1_prime << "," << Q2_prime << "," << A1_prime << ","
                       << A2_prime << endl;
+        } */
+
+        for (int n = 0; n < vessels_in.size(); n++)
+        {
+            int n_start = n;
+            const Elem *elem = mesh.elem_ptr(n);
+            dof_map.dof_indices(elem, dof_indices_u, u_var);
+            dof_map.dof_indices(elem, dof_indices_p, p_var);
+
+            double vess_x1 = vessels[n].x1 * L_v;
+            double vess_y1 = vessels[n].y1 * L_v;
+            double vess_z1 = vessels[n].z1 * L_v;
+
+            double Q1_prime = flow_vec[dof_indices_u[0]];
+            double A1_prime = flow_vec[dof_indices_p[0]];
+            double Q1 = Q1_prime * sqrt(p_0 / rho_v) * L_v * L_v;
+            double A1 = A1_prime * L_v * L_v;
+            double p1 = vessels[n].pext +
+                        (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
+                            (sqrt(A1) - sqrt(M_PI * vessels[n].r * vessels[n].r));
+            double rad1 = sqrt(A1 / M_PI);
+
+            if (vessels_in[n].dl != -10)
+            {
+                n++;
+                if (vessels_in[n].dl != -10)
+                {
+                    n++;
+                    if (vessels_in[n].dl != -10)
+                    {
+                        n++;
+                    }
+                }
+            }
+
+            const Elem *elem_2 = mesh.elem_ptr(n);
+            dof_map.dof_indices(elem_2, dof_indices_u, u_var);
+            dof_map.dof_indices(elem_2, dof_indices_p, p_var);
+
+            double vess_x2 = vessels[n].x2 * L_v;
+            double vess_y2 = vessels[n].y2 * L_v;
+            double vess_z2 = vessels[n].z2 * L_v;
+
+            double Q2_prime = flow_vec[dof_indices_u[1]];
+            double A2_prime = flow_vec[dof_indices_p[1]];
+            double Q2 = Q2_prime * sqrt(p_0 / rho_v) * L_v * L_v;
+            double A2 = A2_prime * L_v * L_v;
+            double p2 = vessels[n].pext +
+                        (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
+                            (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r));
+            double rad2 = sqrt(A2 / M_PI);
+
+            vess_x1 = 0.1 * vess_x1 - 0.5 * ((-3.1772) + (3.6581));
+            vess_y1 = 0.1 * vess_y1 - 0.5 * ((-3.0591) + (3.2769));
+            vess_z1 = 0.1 * vess_z1 - 0.5 * ((0.015051) + (6.0814));
+
+            vess_x2 = 0.1 * vess_x2 - 0.5 * ((-3.1772) + (3.6581));
+            vess_y2 = 0.1 * vess_y2 - 0.5 * ((-3.0591) + (3.2769));
+            vess_z2 = 0.1 * vess_z2 - 0.5 * ((0.015051) + (6.0814));
+
+            double Q1v_prime = 0.0, A1v_prime = 0.0, Q1v = 0.0, A1v = 0.0, p1v = 0.0;
+            double Q2v_prime = 0.0, A2v_prime = 0.0, Q2v = 0.0, A2v = 0.0, p2v = 0.0;
+
+            if (venous_flow == 1)
+            {
+                const Elem *elem_v = mesh.elem_ptr(n_start + vessels_in.size());
+                dof_map.dof_indices(elem_v, dof_indices_u, u_var);
+                dof_map.dof_indices(elem_v, dof_indices_p, p_var);
+
+                Q1v_prime = flow_vec[dof_indices_u[0]];
+                A1v_prime = flow_vec[dof_indices_p[0]];
+                Q1v = Q1v_prime * sqrt(p_0 / rho_v) * L_v * L_v;
+                A1v = A1v_prime * L_v * L_v;
+                p1v = vessels[n_start].pext +
+                      (vessels[n_start].beta / (M_PI * vessels[n_start].r * vessels[n_start].r)) *
+                          (sqrt(A1v) - sqrt(M_PI * vessels[n_start].r * vessels[n_start].r));
+
+                const Elem *elem_2v = mesh.elem_ptr(n + vessels_in.size());
+                dof_map.dof_indices(elem_2v, dof_indices_u, u_var);
+                dof_map.dof_indices(elem_2v, dof_indices_p, p_var);
+
+                Q2v_prime = flow_vec[dof_indices_u[0]];
+                A2v_prime = flow_vec[dof_indices_p[0]];
+                Q2v = Q2v_prime * sqrt(p_0 / rho_v) * L_v * L_v;
+                A2v = A2v_prime * L_v * L_v;
+                p2v = vessels[n].pext +
+                      (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
+                          (sqrt(A2v) - sqrt(M_PI * vessels[n].r * vessels[n].r));
+            }
+
+            file_vess << vess_x1 << "," << vess_y1 << ","
+                      << vess_z1 << "," << vess_x2 << ","
+                      << vess_y2 << "," << vess_z2 << ","
+                      << vessels[n].l * L_v * 0.1 << "," << rad1 * 0.1 << "," << rad2 * 0.1 << ","
+                      << Q1 << "," << Q2 << "," << p1 << "," << p2 << ","
+                      << Q1v << "," << Q2v << "," << p1v << "," << p2v << ","
+                      << Q1 + Q1v << "," << Q2 + Q2v << endl;
         }
         file_vess.close();
     }
@@ -3559,16 +3655,16 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
 
             file_art << " " << qart_cur;
 
-            if(venous_flow == 1)
+            if (venous_flow == 1)
             {
-                int n_v = termNum[i]+vessels_in.size();
+                int n_v = termNum[i] + vessels_in.size();
                 const Elem *elem_v = mesh.elem_ptr(n_v);
 
                 dof_map.dof_indices(elem_v, dof_indices_u, 0);
                 double qvein_cur = flow_vec[dof_indices_u[1]] * sqrt(p_0 / rho_v) * L_v * L_v;
 
                 file_vein << " " << qvein_cur;
-                file_source << " " << qart_cur+qvein_cur;
+                file_source << " " << qart_cur + qvein_cur;
             }
         }
         file_art << endl;
@@ -3582,7 +3678,6 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
             file_source << endl;
             file_source.close();
         }
-
     }
 }
 
