@@ -2923,7 +2923,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems &es_fluid)
 #endif
     double source_cur = 0.0;
 
-    for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
+    /* for (int j = 0; j < VesselFlow::pArt(0).size(); j++)
     {
       int n = VesselFlow::termNum[j];
       const Elem *elem_fluid = mesh_fluid.elem_ptr(n);
@@ -2950,9 +2950,9 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems &es_fluid)
 
       // if(i==0)
       // cout<<"i="<<i<<" j="<<j<<" "<<a_const<<" "<<b_const<<" "<<a_const * exp(b_const * (dist_2))<<" "<<dist_2<<endl;
-    }
+    } */
 
-    // source_cur = source_vess[i];
+     source_cur = source_vess[i];
     // source_cur = near_vess[i];
 
     // cout<<i<<" "<<VesselFlow::mesh_data[i].elem_id<<endl;
