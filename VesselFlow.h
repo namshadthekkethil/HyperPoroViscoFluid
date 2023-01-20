@@ -129,7 +129,7 @@ public:
   static double t_load, time_per;
   static double gamma_perm;
   static DenseVector<vector<double>> pArt,pVein;
-  static vector<double> qArt,qVein;
+  static vector<double> qArt,qVein,qArtMod,qVeinMod;
   static vector<int> termNum;
   static int N_period,N_total;
   static DenseVector<DenseVector<double>> pLt,pRt;
