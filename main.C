@@ -335,6 +335,7 @@ void solve_systems(LibMeshInit &init, int rank, int np)
   mesh_fluid.print_info();
   VesselFlow::update_mesh_data(mesh_temp);
   VesselFlow::update_nearest_elem();
+  VesselFlow::update_nearest_elem_term();
 #endif
 
   InputParam::read_mesh(mesh);

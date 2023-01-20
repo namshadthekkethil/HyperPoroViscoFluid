@@ -37,7 +37,8 @@ double VesselFlow::gamma_perm;
 
 DenseVector<vector<double>> VesselFlow::pArt, VesselFlow::pVein;
 
-vector<double> VesselFlow::qArt, VesselFlow::qVein, VesselFlow::qArtMod, VesselFlow::qVeinMod;
+vector<double> VesselFlow::qArt, VesselFlow::qVein, VesselFlow::qArtMod, VesselFlow::qVeinMod,
+    VesselFlow::nearElemTer, VesselFlow::pExtTerm;
 
 vector<int> VesselFlow::termNum;
 
@@ -310,6 +311,33 @@ void VesselFlow::update_nearest_elem()
             if (venous_flow == 1)
                 vessels[i + vessels_in.size()].e_near = -10;
         }
+    }
+}
+
+void VesselFlow::update_nearest_elem_term()
+{
+    nearElemTer.resize(pArt(0).size());
+    pExtTerm.resize(pArt(0).size());
+    for (int n = 0; n < pArt(0).size(); n++)
+    {
+        int i = termNum[n];
+
+        double dist_min = 1.0e10;
+        int j_min = 0;
+        for (int j = 0; j < mesh_data.size(); j++)
+        {
+            double dist_j = pow(0.5 * (vessels[i].x1 + vessels[i].x2) - mesh_data[j].x, 2) +
+                            pow(0.5 * (vessels[i].y1 + vessels[i].y2) - mesh_data[j].y, 2) +
+                            pow(0.5 * (vessels[i].z1 + vessels[i].z2) - mesh_data[j].z, 2);
+
+            if (dist_j < dist_min)
+            {
+                dist_min = dist_j;
+                j_min = j;
+            }
+        }
+
+        nearElemTer[n] = j_min;
     }
 }
 
@@ -720,6 +748,7 @@ void VesselFlow::solve_flow(EquationSystems &es)
          << " pin=" << PInlet(ttime) << endl;
 
     compute_pext(ttime);
+    compute_pext_term();
 
     flow_system.solve();
 }
@@ -1434,11 +1463,13 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                         double Avout_prime = flow_vec[dof_indices_neighbor_out_p[1]];
                         double Avout = Aaout_prime * L_v * L_v;
 
-                        Kpp(1,1) = -(y11(0)*(vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r))*
-                        (1.0/(2.0*sqrt(Aaout))))/(sqrt(p_0 / rho_v) * L_v * L_v);
+                        Kpp(1, 1) = -(y11(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                                      (1.0 / (2.0 * sqrt(Aaout)))) /
+                                    (sqrt(p_0 / rho_v) * L_v * L_v);
 
-                        Kppnout(1,1) = -(y12(0)*(vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r))*
-                        (1.0/(2.0*sqrt(Avout))))/(sqrt(p_0 / rho_v) * L_v * L_v);
+                        Kppnout(1, 1) = -(y12(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                                          (1.0 / (2.0 * sqrt(Avout)))) /
+                                        (sqrt(p_0 / rho_v) * L_v * L_v);
                     }
                 }
                 else
@@ -1547,13 +1578,13 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                         double Avout_prime = flow_vec[dof_indices_p[1]];
                         double Avout = Aaout_prime * L_v * L_v;
 
-                        Kppnout(1,1) = -(y21(0)*(vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r))*
-                        (1.0/(2.0*sqrt(Aaout))))/(sqrt(p_0 / rho_v) * L_v * L_v);
+                        Kppnout(1, 1) = -(y21(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                                          (1.0 / (2.0 * sqrt(Aaout)))) /
+                                        (sqrt(p_0 / rho_v) * L_v * L_v);
 
-                        Kpp(1,1) = -(y22(0)*(vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r))*
-                        (1.0/(2.0*sqrt(Avout))))/(sqrt(p_0 / rho_v) * L_v * L_v);
-
-                        
+                        Kpp(1, 1) = -(y22(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                                      (1.0 / (2.0 * sqrt(Avout)))) /
+                                    (sqrt(p_0 / rho_v) * L_v * L_v);
                     }
                 }
             }
@@ -2350,8 +2381,8 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                                             (sqrt(Avout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
                                            (vessels[elem_id].pext - PExt(0));
 
-                            double qart_cur = qArtMod[vessel_ter_num] + 
-                            (y11(0) * paout + y12(0) * pvout) / (sqrt(p_0 / rho_v) * L_v * L_v);
+                            double qart_cur = qArtMod[vessel_ter_num] +
+                                              (y11(0) * paout + y12(0) * pvout) / (sqrt(p_0 / rho_v) * L_v * L_v);
 
                             // Fp(1) = system.current_solution(dof_indices_u[1]) - qArt[vessel_ter_num];
                             Fp(1) = system.current_solution(dof_indices_u[1]) - qart_cur;
@@ -2454,8 +2485,8 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                                             (sqrt(Avout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
                                            (vessels[elem_id].pext - PExt(0));
 
-                            double qvein_cur = qVeinMod[vessel_ter_num] + 
-                            (y21(0) * paout + y22(0) * pvout) / (sqrt(p_0 / rho_v) * L_v * L_v);
+                            double qvein_cur = qVeinMod[vessel_ter_num] +
+                                               (y21(0) * paout + y22(0) * pvout) / (sqrt(p_0 / rho_v) * L_v * L_v);
 
                             // Fp(1) = system.current_solution(dof_indices_u[1]) - qVein[vessel_ter_num];
                             Fp(1) = system.current_solution(dof_indices_u[1]) - qvein_cur;
@@ -3107,6 +3138,16 @@ void VesselFlow::compute_pext(double time_v)
         else
             vessels[n].pext = 0.0;
     }
+}
+
+void VesselFlow::compute_pext_term()
+{
+
+    for (int i = 0; i < pArt(0).size(); i++)
+    {
+        pExtTerm[i]=pext_vec[nearElemTer[i]];
+    }
+
 }
 
 double VesselFlow::PInlet(double time_v)
@@ -3883,6 +3924,8 @@ void VesselFlow::initialise_partvein(int rank, int np, LibMeshInit &init)
             pRt(j)(i) = pVein(tmtau_itr)[j];
         }
     }
+
+    
 }
 
 void VesselFlow::update_partvein(EquationSystems &es, int rank)

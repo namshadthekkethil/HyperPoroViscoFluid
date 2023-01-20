@@ -129,7 +129,7 @@ public:
   static double t_load, time_per;
   static double gamma_perm;
   static DenseVector<vector<double>> pArt,pVein;
-  static vector<double> qArt,qVein,qArtMod,qVeinMod;
+  static vector<double> qArt,qVein,qArtMod,qVeinMod,nearElemTer,pExtTerm;
   static vector<int> termNum;
   static int N_period,N_total;
   static DenseVector<DenseVector<double>> pLt,pRt;
@@ -185,6 +185,7 @@ public:
   static double PDrain(double time_v);
   static double PExt(int n);
   static void compute_pext(double time_v);
+  static void compute_pext_term();
 
   static void updateImpedance();
 
@@ -198,6 +199,7 @@ public:
   static double QInlet();
   static void update_mesh_data(Mesh &mesh);
   static void update_nearest_elem();
+  static void update_nearest_elem_term();
   static void update_pext(EquationSystems & es);
 };
 
