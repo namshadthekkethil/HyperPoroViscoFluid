@@ -3976,8 +3976,8 @@ void VesselFlow::update_partvein(EquationSystems &es, int rank)
                         (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
                             (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r)); */
 
-            double p2 = (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
-                        (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r));
+            double p2 = ((vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
+                        (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r)))+(vessels[n].pext-pExtTerm[i]);
 
             pArt(time_itr_per)[i] = p2;
             pLt(i)(0) = p2;
@@ -3994,8 +3994,8 @@ void VesselFlow::update_partvein(EquationSystems &es, int rank)
                  (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
                      (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r)); */
 
-            p2 = (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
-                 (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r));
+            p2 = ((vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
+                 (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r)))+(vessels[n].pext-pExtTerm[i]);
 
             pVein(time_itr_per)[i] = p2;
             pRt(i)(0) = p2;
