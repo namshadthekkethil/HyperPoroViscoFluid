@@ -3168,7 +3168,7 @@ void VesselFlow::compute_pext_term()
         }
         else if (pext_type == 10)
         {
-            pExtTerm[i] = pext_vec[nearElemTer[i]];
+            pExtTerm[i] = pext_vec[nearElemTer[i]]*0.0001;
         }
     }
 }
