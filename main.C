@@ -220,6 +220,12 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
   fileend = ".dat";
   string out_results = name_results + numstr + fileend;
 
+  double m_total=0.0,J_total=0.0;
+
+  ofstream file_result;
+  file_result.open(name_results, ios::out);
+  file_result.close();
+
   LinearImplicitSystem &system_incomp =
       es.get_system<LinearImplicitSystem>("incomp_system");
 
@@ -309,6 +315,11 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
       count_write++;
       exo_io.write_timestep(out_frame, es, count_write, InputParam::ttime);
     }
+
+    file_result.open(name_results, ios::app);
+    PostProcess::compute_skeleton_volume(es, es_cur, J_total, m_total);
+    file_result<<InputParam::time_itr*InputParam::dt<<" "<<J_total<<" "<<m_total<<endl;
+    file_result.close();
   }
 
   #if(FLUIDFLOW == 1)
