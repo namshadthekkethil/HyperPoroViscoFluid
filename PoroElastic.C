@@ -201,7 +201,8 @@ system_flowlarge.add_variable("flowLargeVar", CONSTANT, MONOMIAL);
     system_delw.attach_assemble_function(assemble_delw);
   }
 
-
+  System &system_aha = es.add_system<System>("ahaSystem");
+  system_aha.add_variable("ahaVar", CONSTANT, MONOMIAL);
 
   II.resize(MESH_DIMENSION, MESH_DIMENSION);
   II(0, 0) = 1.0;
@@ -3183,5 +3184,125 @@ void PoroElastic::update_source_vessel(EquationSystems &es)
 
       source_vess[i] += flow_vec[dof_indices_u[1]] * sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v;
     }
+  }
+}
+
+void PoroElastic::update_aha(EquationSystems &es)
+{
+
+  libMesh::MeshBase &mesh = es.get_mesh();
+  const unsigned int dim = mesh.mesh_dimension();
+
+  System &system_aha = es.get_system<System>("ahaSystem");
+
+
+  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+  const MeshBase::const_element_iterator end_el =
+      mesh.active_local_elements_end();
+
+  for (; el != end_el; ++el)
+  {
+    const Elem *elem = *el;
+
+    int i = elem->id();
+
+    double x_elem = VesselFlow::mesh_data[i].x;
+    double y_elem = VesselFlow::mesh_data[i].y;
+#if (MESH_DIMENSION == 3)
+    double z_elem = VesselFlow::mesh_data[i].z;
+#endif
+
+    double aha_cur = 0.0;
+
+    double angle_e = atan2(y_elem, x_elem)*(180.0/3.14159)+180.0;
+
+    if(z_elem > 40.0)
+    {
+      if(angle_e <=60.0)
+        aha_cur = 1.0;
+      else if (angle_e <= 120.0)
+        aha_cur = 2.0;
+      else if (angle_e <= 180.0)
+        aha_cur = 3.0;
+      else if (angle_e <= 240.0)
+        aha_cur = 4.0;
+      else if (angle_e <= 300.0)
+        aha_cur = 5.0;
+      else
+        aha_cur = 6.0;
+    }
+
+    else if (z_elem > 20.0)
+    {
+      if (angle_e <= 60.0)
+        aha_cur = 7.0;
+      else if (angle_e <= 120.0)
+        aha_cur = 8.0;
+      else if (angle_e <= 180.0)
+        aha_cur = 9.0;
+      else if (angle_e <= 240.0)
+        aha_cur = 10.0;
+      else if (angle_e <= 300.0)
+        aha_cur = 11.0;
+      else
+        aha_cur = 12.0;
+    }
+
+    else
+    {
+      if (angle_e <= 45.0)
+        aha_cur = 13.0;
+      else if (angle_e <= 135.0)
+        aha_cur = 14.0;
+      else if (angle_e <= 225.0)
+        aha_cur = 15.0;
+      else if (angle_e <= 315.0)
+        aha_cur = 16.0;
+      else
+        aha_cur = 13.0;
+    }
+
+
+    const int dof_index_aha = elem->dof_number(system_aha.number(), 0, 0);
+    system_aha.solution->set(dof_index_aha, aha_cur);
+  }
+
+  system_aha.solution->close();
+  system_aha.solution->localize(*system_aha.current_local_solution);
+
+  NumericVector<double> &aha_data = *(system_aha.current_local_solution);
+  aha_data.close();
+
+  vector<double> aha_vec;
+  aha_data.localize(aha_vec);
+
+  VesselFlow::ahaTerm.resize(VesselFlow::pArt(0).size());
+  for (int n = 0; n < VesselFlow::pArt(0).size(); n++)
+  {
+    const Elem *elem = mesh.elem_ptr(VesselFlow::nearElemTer[n]);
+
+    const int dof_index_aha = elem->dof_number(system_aha.number(), 0, 0);
+
+    VesselFlow::ahaTerm[n] = aha_vec[dof_index_aha];
+
+    //cout << "aha_elem=" << aha_vec[dof_index_aha] << " " << VesselFlow::ahaTerm[n] <<endl;
+  }
+
+  VesselFlow::ahaVolume.resize(16);
+
+  MeshBase::const_element_iterator el_full = mesh.active_elements_begin();
+  const MeshBase::const_element_iterator end_el_full =
+      mesh.active_elements_end();
+  for (; el_full != end_el_full; ++el_full)
+  {
+    const Elem *elem = *el_full;
+
+    double vol_el = elem->volume();
+
+    const int dof_index_aha = elem->dof_number(system_aha.number(), 0, 0);
+
+    int aha_ind = aha_vec[dof_index_aha];
+
+    VesselFlow::ahaVolume[aha_ind - 1] += vol_el;
   }
 }

@@ -400,6 +400,7 @@ HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
   if(InputParam::porous == 1 && FLUIDFLOW == 1)
   {
     PoroElastic::update_nearest_vessel();
+    PoroElastic::update_aha(equation_systems);
   }
 
   

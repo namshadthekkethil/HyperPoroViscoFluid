@@ -40,7 +40,9 @@ DenseVector<vector<double>> VesselFlow::pArt, VesselFlow::pVein;
 vector<double> VesselFlow::qArt, VesselFlow::qVein, VesselFlow::qArtMod, VesselFlow::qVeinMod,
     VesselFlow::nearElemTer, VesselFlow::pExtTerm;
 
-vector<int> VesselFlow::termNum;
+vector<double> VesselFlow::ahaVolume;
+
+vector<int> VesselFlow::ahaTerm, VesselFlow::termNum;
 
 int VesselFlow::N_period, VesselFlow::N_total;
 
@@ -414,10 +416,12 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
     string file_name_art = "flow_arteries.dat";
     string file_name_vein = "flow_vein.dat";
     string file_name_source = "flow_source.dat";
+    string file_name_aha = "flow_aha.dat";
 
     ofstream file_art;
     ofstream file_vein;
     ofstream file_source;
+    ofstream file_aha;
 
     ofstream file_vess;
     if (rank == 0)
@@ -427,12 +431,14 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
         file_art.open(file_name_art, ios::out);
         file_vein.open(file_name_vein, ios::out);
         file_source.open(file_name_source, ios::out);
+        file_aha.open(file_name_aha, ios::out);
 
         file_vess.close();
 
         file_art.close();
         file_vein.close();
         file_source.close();
+        file_aha.close();
     }
 }
 
@@ -3751,13 +3757,60 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
     string file_name_art = "flow_arteries.dat";
     string file_name_vein = "flow_vein.dat";
     string file_name_source = "flow_source.dat";
+    string file_name_aha = "flow_aha.dat";
 
     ofstream file_art;
     ofstream file_vein;
     ofstream file_source;
+    ofstream file_aha;
+
+    
 
     if (rank == 0)
     {
+        file_aha.open(file_name_aha, ios::app);
+        double flow_aha_cur[16];
+
+        for (int i = 0; i < 16; i++)
+        {
+            flow_aha_cur[i] = 0.0;
+        }
+
+        for (int i = 0; i < pArt(0).size(); i++)
+        {
+            int n = termNum[i];
+            const Elem *elem = mesh.elem_ptr(n);
+
+            dof_map.dof_indices(elem, dof_indices_u, 0);
+            double qart_cur = flow_vec[dof_indices_u[1]] * sqrt(p_0 / rho_v) * L_v * L_v;
+
+            flow_aha_cur[ahaTerm[i] - 1] += qart_cur;
+
+            if (venous_flow == 1)
+            {
+                int n_v = termNum[i] + vessels_in.size();
+                const Elem *elem_v = mesh.elem_ptr(n_v);
+
+                dof_map.dof_indices(elem_v, dof_indices_u, 0);
+                double qvein_cur = flow_vec[dof_indices_u[1]] * sqrt(p_0 / rho_v) * L_v * L_v;
+
+                flow_aha_cur[ahaTerm[i] - 1] += qvein_cur;
+            }
+
+            
+
+            // cout<<"i="<<i<<" aha="<<ahaTerm[i]<<endl;
+        }
+
+        file_aha << ttime * sqrt(rho_v / p_0) * L_v;
+
+        for (int i = 0; i < 16; i++)
+        {
+            file_aha << " " << (flow_aha_cur[i]/ahaVolume[i])*60.0*0.001;
+        }
+        file_aha << endl;
+
+        file_aha.close();
 
         file_art.open(file_name_art, ios::app);
 
@@ -3804,6 +3857,8 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
             file_source << endl;
             file_source.close();
         }
+
+        file_aha.close();
     }
 }
 
@@ -4422,3 +4477,4 @@ void VesselFlow::write_restart_data(EquationSystems &es, int it, int rank)
         file_partvein.close();
     }
 }
+

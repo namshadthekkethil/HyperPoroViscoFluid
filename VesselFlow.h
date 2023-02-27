@@ -130,6 +130,8 @@ public:
   static double gamma_perm;
   static DenseVector<vector<double>> pArt,pVein;
   static vector<double> qArt,qVein,qArtMod,qVeinMod,nearElemTer,pExtTerm;
+  static vector<double> ahaVolume;
+  static vector<int> ahaTerm;
   static vector<int> termNum;
   static int N_period,N_total;
   static DenseVector<DenseVector<double>> pLt,pRt;
