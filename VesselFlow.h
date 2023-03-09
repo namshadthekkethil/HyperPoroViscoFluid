@@ -155,8 +155,14 @@ public:
   static void compute_jacobian(const NumericVector<Number> &,
                                SparseMatrix<Number> &J,
                                NonlinearImplicitSystem &system);
+  static void compute_jacobian_steady(const NumericVector<Number> &,
+                               SparseMatrix<Number> &J,
+                               NonlinearImplicitSystem &system);
 
   static void compute_residual(const NumericVector<Number> &X,
+                               NumericVector<Number> &R,
+                               NonlinearImplicitSystem &system);
+  static void compute_residual_steady(const NumericVector<Number> &X,
                                NumericVector<Number> &R,
                                NonlinearImplicitSystem &system);
   static void initialise_area(EquationSystems &es);

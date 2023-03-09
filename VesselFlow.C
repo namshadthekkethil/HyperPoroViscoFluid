@@ -4478,3 +4478,506 @@ void VesselFlow::write_restart_data(EquationSystems &es, int it, int rank)
     }
 }
 
+void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
+                                         NumericVector<Number> &R,
+                                         NonlinearImplicitSystem &system)
+{
+    // It is a good idea to make sure we are
+    // assembling the proper system.
+    libmesh_assert_equal_to(system_name, "flowSystem");
+
+    // Get a constant reference to the mesh
+    // object.
+    const MeshBase &mesh = system.get_mesh();
+
+    // The dimension that we are running
+    const unsigned int dim = mesh.mesh_dimension();
+
+    // Numeric ids corresponding to each
+    // variable in the system
+    const unsigned int u_var = system.variable_number("QVar");
+    const unsigned int p_var = system.variable_number("pVar");
+
+    auto &es = system.get_equation_systems();
+
+    // Get the Finite Element type for "u".
+    // Note this will be the same as the type
+    // for "v".
+    FEType fe_vel_type = system.variable_type(u_var);
+    std::unique_ptr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
+    QGauss qrule(dim, fe_vel_type.default_quadrature_order());
+    fe_vel->attach_quadrature_rule(&qrule);
+
+    // Get the Finite Element type for "p".
+    FEType fe_pres_type = system.variable_type(p_var);
+    std::unique_ptr<FEBase> fe_pres(FEBase::build(dim, fe_pres_type));
+    fe_pres->attach_quadrature_rule(&qrule);
+
+    // system.solution->localize(*system.current_local_solution);
+    NumericVector<double> &flow_data = *(system.current_local_solution);
+    flow_data.close();
+
+    vector<double> flow_vec;
+    flow_data.localize(flow_vec);
+
+    const std::vector<Real> &JxW = fe_vel->get_JxW();
+
+    const std::vector<std::vector<Real>> &phi = fe_vel->get_phi();
+    const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
+
+    const std::vector<Point> &Xref_el = fe_vel->get_xyz();
+
+    const std::vector<std::vector<Real>> &psi = fe_pres->get_phi();
+    const std::vector<std::vector<RealGradient>> &dpsi = fe_pres->get_dphi();
+
+    UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
+    QGauss qface(dim - 1, fe_vel_type.default_quadrature_order());
+    fe_face->attach_quadrature_rule(&qface);
+
+    UniquePtr<FEBase> fe_face_p(FEBase::build(dim, fe_pres_type));
+    fe_face_p->attach_quadrature_rule(&qface);
+
+    const std::vector<std::vector<RealGradient>> &dphi_face = fe_face->get_dphi();
+
+    const std::vector<std::vector<RealGradient>> &dphi_face_p =
+        fe_face_p->get_dphi();
+
+    const DofMap &dof_map = system.get_dof_map();
+
+    DenseVector<Number> Fe;
+
+    DenseSubVector<Number> Fu(Fe), Fp(Fe);
+
+    std::vector<dof_id_type> dof_indices;
+    std::vector<dof_id_type> dof_indices_u;
+    std::vector<dof_id_type> dof_indices_p;
+
+    std::vector<dof_id_type> dof_indices_neighbor_p;
+    std::vector<dof_id_type> dof_indices_neighbor_u;
+    std::vector<dof_id_type> dof_indices_neighbor_1_u;
+    std::vector<dof_id_type> dof_indices_neighbor_1_p;
+    std::vector<dof_id_type> dof_indices_neighbor_2_u;
+    std::vector<dof_id_type> dof_indices_neighbor_2_p;
+
+    R.zero();
+
+    MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+    const MeshBase::const_element_iterator end_el =
+        mesh.active_local_elements_end();
+
+    int elem_count = 0;
+    for (; el != end_el; ++el)
+    {
+        const Elem *elem = *el;
+
+        const auto elem_id = elem->id();
+        int elem_id_n;
+        dof_map.dof_indices(elem, dof_indices);
+        dof_map.dof_indices(elem, dof_indices_u, u_var);
+        dof_map.dof_indices(elem, dof_indices_p, p_var);
+
+        const unsigned int n_dofs = dof_indices.size();
+        const unsigned int n_u_dofs = dof_indices_u.size();
+        const unsigned int n_p_dofs = dof_indices_p.size();
+
+        fe_vel->reinit(elem);
+        fe_pres->reinit(elem);
+
+        Fe.resize(n_dofs);
+
+        Fu.reposition(u_var * n_u_dofs, n_u_dofs);
+        Fp.reposition(p_var * n_u_dofs, n_p_dofs);
+
+        double r_const = pow(vessels[elem_id].r,4);
+
+        // Now we will build the element matrix.
+        for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
+        {
+
+            double Q_qp = 0.0;
+            double p_qp = 0.0;
+
+            for (unsigned int j = 0; j < n_u_dofs; j++)
+            {
+                Q_qp += phi[j][qp] * system.current_solution(dof_indices_u[j]);
+            }
+
+            for (unsigned int j = 0; j < n_p_dofs; j++)
+            {
+                p_qp += psi[j][qp] * system.current_solution(dof_indices_p[j]);
+            }
+
+            for (unsigned int i = 0; i < n_u_dofs; i++)
+            {
+
+                Fu(i) += -p_qp*r_const * dphi[i][qp](0) * JxW[qp];
+
+                Fu(i) += Q_qp * phi[i][qp] * JxW[qp];
+            }
+
+            for (unsigned int i = 0; i < n_p_dofs; i++)
+            {
+                Fp(i) += -Q_qp * dpsi[i][qp](0) * JxW[qp];
+            }
+
+        } // end of the quadrature point qp-loop
+
+        if (vessels[elem_id].dr != -10)
+        {
+
+            const Elem *neighbor1 = mesh.elem_ptr(vessels[elem_id].dl);
+            const Elem *neighbor2 = mesh.elem_ptr(vessels[elem_id].dr);
+
+            dof_map.dof_indices(neighbor1, dof_indices_neighbor_1_u, u_var);
+            dof_map.dof_indices(neighbor2, dof_indices_neighbor_2_u, u_var);
+        }
+
+        if (vessels[elem_id].p != -10)
+        {
+            if (vessels[vessels[elem_id].p].dr != -10)
+            {
+                const Elem *neighbor = mesh.elem_ptr(vessels[elem_id].p);
+
+                elem_id_n = neighbor->id();
+
+                dof_map.dof_indices(neighbor, dof_indices_neighbor_u, u_var);
+                dof_map.dof_indices(neighbor, dof_indices_neighbor_p, p_var);
+            }
+        }
+
+        for (unsigned int side = 0; side < elem->n_sides(); side++)
+        {
+
+            if (elem->neighbor_ptr(side) == libmesh_nullptr)
+            {
+
+                const std::vector<Point> &normal_face = fe_face->get_normals();
+
+                const std::vector<std::vector<Real>> &phi_face = fe_face->get_phi();
+
+                const std::vector<Point> &Xref = fe_face->get_xyz();
+
+                fe_face->reinit(elem, side);
+                // short int bc_id = mesh.boundary_info->boundary_id(elem, side);
+
+                vector<boundary_id_type> bc_id_vec;
+                mesh.boundary_info->boundary_ids(elem, side, bc_id_vec);
+                short int bc_id =
+                    bc_id_vec[0];
+
+                if (bc_id == 1000) // left boundary
+                {
+                    double p_left = 1.0;
+                    double Q_left = system.current_solution(dof_indices_u[0]);
+
+                    Fu(0) += p_left*r_const * normal_face[0].operator()(0);
+                    Fp(0) += Q_left * normal_face[0].operator()(0);
+                }
+
+                if (bc_id == 4000) // right boundary
+                {
+                    double p_right = 0.0;
+                    double Q_right = system.current_solution(dof_indices_u[1]);
+
+                    Fu(1) += p_right*r_const * normal_face[0].operator()(0);
+                    Fp(1) += Q_right * normal_face[0].operator()(0);
+                }
+                //
+                if (bc_id == 2000) // parent boundary at junction
+                {
+
+                    double Q_neigh1 = flow_vec[dof_indices_neighbor_1_u[0]];
+                    double Q_neigh2 = flow_vec[dof_indices_neighbor_2_u[0]];
+                    double p_right = system.current_solution(dof_indices_p[1]);
+
+                    Fu(1) += p_right*r_const * normal_face[0].operator()(0);
+                    Fp(1) += (Q_neigh1 + Q_neigh2) * normal_face[0].operator()(0);
+                }
+
+                if (bc_id == 3000) // daughter boundary at junction
+                {
+                    double Q_left = system.current_solution(dof_indices_u[0]);
+                    double p_neigh = flow_vec[dof_indices_neighbor_p[1]];
+
+                    Fu(0) += p_neigh*r_const * normal_face[0].operator()(0);
+                    Fp(0) += Q_left * normal_face[0].operator()(0);
+                }
+            }
+        }
+
+        elem_count++;
+
+        R.add_vector(Fe, dof_indices);
+    } // end of element loop
+
+    // cout << "R=" << R << endl;
+}
+
+void VesselFlow::compute_jacobian_steady(const NumericVector<Number> &,
+                                         SparseMatrix<Number> &J,
+                                         NonlinearImplicitSystem &system)
+{
+    libmesh_assert_equal_to(system_name, "flowSystem");
+
+    // Get a constant reference to the mesh object.
+    const MeshBase &mesh = system.get_mesh();
+
+    // The dimension that we are running
+    const unsigned int dim = mesh.mesh_dimension();
+
+    // Numeric ids corresponding to each variable in the system
+    const unsigned int u_var = system.variable_number("QVar");
+    const unsigned int p_var = system.variable_number("pVar");
+
+    auto &es = system.get_equation_systems();
+
+    NumericVector<double> &flow_data = *(system.current_local_solution);
+    flow_data.close();
+
+    vector<double> flow_vec;
+    flow_data.localize(flow_vec);
+
+    // Get the Finite Element type for "u".  Note this will be
+    // the same as the type for "v".
+    FEType fe_vel_type = system.variable_type(u_var);
+    std::unique_ptr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
+    QGauss qrule(dim, fe_vel_type.default_quadrature_order());
+    fe_vel->attach_quadrature_rule(&qrule);
+
+    // Get the Finite Element type for "p".
+    FEType fe_pres_type = system.variable_type(p_var);
+    std::unique_ptr<FEBase> fe_pres(FEBase::build(dim, fe_pres_type));
+    fe_pres->attach_quadrature_rule(&qrule);
+
+    const std::vector<Real> &JxW = fe_vel->get_JxW();
+
+    const std::vector<std::vector<Real>> &phi = fe_vel->get_phi();
+    const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
+
+    const std::vector<std::vector<Real>> &psi = fe_pres->get_phi();
+    const std::vector<std::vector<RealGradient>> &dpsi = fe_pres->get_dphi();
+
+    UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
+    QGauss qface(dim - 1, fe_vel_type.default_quadrature_order());
+    fe_face->attach_quadrature_rule(&qface);
+
+    UniquePtr<FEBase> fe_face_n(FEBase::build(dim, fe_vel_type));
+    fe_face_n->attach_quadrature_rule(&qface);
+
+    UniquePtr<FEBase> fe_face_p(FEBase::build(dim, fe_pres_type));
+    fe_face_p->attach_quadrature_rule(&qface);
+
+    const std::vector<std::vector<RealGradient>> &dphi_face = fe_face->get_dphi();
+
+    const std::vector<std::vector<RealGradient>> &dphi_face_p =
+        fe_face_p->get_dphi();
+
+    const DofMap &dof_map = system.get_dof_map();
+
+    DenseMatrix<Number> Ke;
+
+    DenseSubMatrix<Number> Kuu(Ke), Kup(Ke), Kpu(Ke), Kpp(Ke);
+
+    std::vector<dof_id_type> dof_indices;
+    std::vector<dof_id_type> dof_indices_u;
+    std::vector<dof_id_type> dof_indices_p;
+
+    std::vector<dof_id_type> dof_indices_neighbor_u;
+    std::vector<dof_id_type> dof_indices_neighbor_p;
+    std::vector<dof_id_type> dof_indices_neighbor_1_u;
+    std::vector<dof_id_type> dof_indices_neighbor_1_p;
+    std::vector<dof_id_type> dof_indices_neighbor_2_u;
+    std::vector<dof_id_type> dof_indices_neighbor_2_p;
+
+    J.zero();
+
+    MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+    const MeshBase::const_element_iterator end_el =
+        mesh.active_local_elements_end();
+
+    int elem_count = 0;
+    for (; el != end_el; ++el)
+    {
+        const Elem *elem = *el;
+
+        DenseMatrix<Number> Kpun1, Kpun2, Kuun1, Kuun2, Kupn, Kuun, Kppn, Kpun;
+
+        const auto elem_id = elem->id();
+        int elem_id_n;
+        dof_map.dof_indices(elem, dof_indices);
+        dof_map.dof_indices(elem, dof_indices_u, u_var);
+        dof_map.dof_indices(elem, dof_indices_p, p_var);
+
+        const unsigned int n_dofs = dof_indices.size();
+        const unsigned int n_u_dofs = dof_indices_u.size();
+        const unsigned int n_p_dofs = dof_indices_p.size();
+
+        fe_vel->reinit(elem);
+        fe_pres->reinit(elem);
+
+        Ke.resize(n_dofs, n_dofs);
+
+        Kuu.reposition(u_var * n_u_dofs, u_var * n_u_dofs, n_u_dofs, n_u_dofs);
+        Kup.reposition(u_var * n_u_dofs, p_var * n_u_dofs, n_u_dofs, n_p_dofs);
+
+        Kpu.reposition(p_var * n_u_dofs, u_var * n_u_dofs, n_p_dofs, n_u_dofs);
+        Kpp.reposition(p_var * n_u_dofs, p_var * n_u_dofs, n_p_dofs, n_p_dofs);
+
+        double A0_elem = M_PI * vessels[elem_id].r * vessels[elem_id].r * L_v * L_v;
+
+        double r_const = pow(vessels[elem_id].r, 4);
+
+        // Now we will build the element matrix.
+        for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
+        {
+
+            double Q_qp = 0.0;
+            double p_qp = 0.0;
+
+            for (unsigned int j = 0; j < n_u_dofs; j++)
+            {
+                Q_qp += phi[j][qp] * system.current_solution(dof_indices_u[j]);
+            }
+
+            for (unsigned int j = 0; j < n_p_dofs; j++)
+            {
+                p_qp += psi[j][qp] * system.current_solution(dof_indices_p[j]);
+            }
+
+            for (unsigned int i = 0; i < n_u_dofs; i++)
+            {
+
+                for (unsigned int j = 0; j < n_u_dofs; j++)
+                {
+
+                    Kuu(i, j) += phi[i][qp] * phi[j][qp] * JxW[qp];
+                }
+            }
+
+            for (unsigned int i = 0; i < n_u_dofs; i++)
+            {
+                for (unsigned int j = 0; j < n_p_dofs; j++)
+                {
+
+                    Kup(i, j) += -r_const * psi[j][qp] * dphi[i][qp](0) * JxW[qp];
+                }
+            }
+
+            for (unsigned int i = 0; i < n_p_dofs; i++)
+                for (unsigned int j = 0; j < n_u_dofs; j++)
+                {
+                    Kpu(i, j) += -JxW[qp] * phi[j][qp] * dpsi[i][qp](0);
+                }
+
+        } // end of the quadrature point qp-loop
+
+        if (vessels[elem_id].dr != -10) // parent at junction
+        {
+            const Elem *neighbor1 = mesh.elem_ptr(vessels[elem_id].dl);
+            const Elem *neighbor2 = mesh.elem_ptr(vessels[elem_id].dr);
+
+            // cout << "elem_id=" << elem_id << " n1=" << vessels[elem_id].dl
+            //      << " n2=" << vessels[elem_id].dr << endl;
+
+            dof_map.dof_indices(neighbor1, dof_indices_neighbor_1_u, u_var);
+            dof_map.dof_indices(neighbor2, dof_indices_neighbor_2_u, u_var);
+
+            Kpun1.resize(dof_indices_p.size(), dof_indices_neighbor_1_u.size());
+            Kpun2.resize(dof_indices_p.size(), dof_indices_neighbor_2_u.size());
+
+            Kuun1.resize(dof_indices_u.size(), dof_indices_neighbor_1_u.size());
+            Kuun2.resize(dof_indices_u.size(), dof_indices_neighbor_2_u.size());
+        }
+
+        if (vessels[elem_id].p != -10) // daughter at junction
+        {
+            if (vessels[vessels[elem_id].p].dr != -10)
+            {
+
+                const Elem *neighbor = mesh.elem_ptr(vessels[elem_id].p);
+
+                elem_id_n = neighbor->id();
+
+                dof_map.dof_indices(neighbor, dof_indices_neighbor_u, u_var);
+                dof_map.dof_indices(neighbor, dof_indices_neighbor_p, p_var);
+
+                Kuun.resize(dof_indices_u.size(), dof_indices_neighbor_u.size());
+                Kupn.resize(dof_indices_u.size(), dof_indices_neighbor_p.size());
+
+                Kppn.resize(dof_indices_p.size(), dof_indices_neighbor_p.size());
+                Kpun.resize(dof_indices_p.size(), dof_indices_neighbor_u.size());
+            }
+        }
+
+        for (unsigned int side = 0; side < elem->n_sides(); side++)
+        {
+
+            if (elem->neighbor_ptr(side) == libmesh_nullptr)
+            {
+
+                const std::vector<Point> &normal_face = fe_face->get_normals();
+                fe_face->reinit(elem, side);
+
+                // short int bc_id = mesh.boundary_info->boundary_id(elem, side);
+
+                vector<boundary_id_type> bc_id_vec;
+                mesh.boundary_info->boundary_ids(elem, side, bc_id_vec);
+                short int bc_id = bc_id_vec[0];
+
+                if (bc_id == 1000) // left boundary
+                {
+                    Kpu(0, 0) += normal_face[0].operator()(0);
+                }
+
+                if (bc_id == 4000) // right boundary
+                {
+                    Kpu(1, 1) += normal_face[0].operator()(0);
+                }
+                //
+
+                if (bc_id == 2000) // parent boundary at junction
+                {
+
+                    Kpun1(1, 0) += normal_face[0].operator()(0);
+                    Kpun2(1, 0) += normal_face[0].operator()(0);
+
+                    Kup(1, 1) += r_const*normal_face[0].operator()(0);
+                }
+
+                if (bc_id == 3000) // daughter boundary at junction
+                {
+
+                    Kpu(0, 0) += normal_face[0].operator()(0);
+
+                    Kupn(0, 1) += r_const * normal_face[0].operator()(0);
+                }
+            }
+        }
+
+        if (vessels[elem_id].p != -10)
+        {
+            if (vessels[vessels[elem_id].p].dr != -10) // This is the x=+ boundary
+            {
+                J.add_matrix(Kupn, dof_indices_u, dof_indices_neighbor_p);
+                J.add_matrix(Kuun, dof_indices_u, dof_indices_neighbor_u);
+
+                J.add_matrix(Kppn, dof_indices_p, dof_indices_neighbor_p);
+                J.add_matrix(Kpun, dof_indices_p, dof_indices_neighbor_u);
+            }
+        }
+
+        if (vessels[elem_id].dr != -10)
+        {
+
+            J.add_matrix(Kpun1, dof_indices_p, dof_indices_neighbor_1_u);
+            J.add_matrix(Kpun2, dof_indices_p, dof_indices_neighbor_2_u);
+
+            J.add_matrix(Kuun1, dof_indices_u, dof_indices_neighbor_1_u);
+            J.add_matrix(Kuun2, dof_indices_u, dof_indices_neighbor_2_u);
+        }
+
+        elem_count++;
+        J.add_matrix(Ke, dof_indices);
+
+    } // end of element loop
+}
