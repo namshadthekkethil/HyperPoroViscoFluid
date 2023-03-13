@@ -264,7 +264,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
     InputParam::ttime = count_per*InputParam::dt;
 
     BoundaryCond::compute_pressure();
-    if (InputParam::torsion_type == 4)
+    if (InputParam::torsion_type == 4 || InputParam::torsion_type == 5)
       BoundaryCond::compute_torsion();
 
     ActiveContra::compute_Ta_t();
@@ -449,13 +449,23 @@ int main(int argc, char **argv)
         InputParam::a_bead = (InputParam::V_bead * InputParam::tau_visela) /
                              InputParam::Vtaubya(ii);
         InputParam::mesh_scale = InputParam::a_bead / 0.5;
-        InputParam::dt = ((InputParam::bead_disp * InputParam::a_bead) / InputParam::V_bead) /
-                         InputParam::n_solves;
 
-        cout << "V_bead=" << InputParam::V_bead
-             << " InputParam::a_bead=" << InputParam::a_bead
-             << " dt=" << InputParam::dt
-             << " mesh_scale=" << InputParam::mesh_scale << endl;
+        if (InputParam::torsion_type == 4)
+        {
+          InputParam::dt = ((InputParam::bead_disp * InputParam::a_bead) / InputParam::V_bead) /
+                           InputParam::n_solves;
+        }
+        else if (InputParam::torsion_type == 5)
+        {
+          InputParam::omega = InputParam::V_bead / (InputParam::bead_disp * InputParam::a_bead);
+
+          InputParam::dt = ((2.0 * M_PI) / InputParam::omega) / InputParam::n_solves;
+        }
+
+          cout << "V_bead=" << InputParam::V_bead
+               << " InputParam::a_bead=" << InputParam::a_bead
+               << " dt=" << InputParam::dt
+               << " mesh_scale=" << InputParam::mesh_scale << endl;
 
         PostProcess::fp_time.resize(0);
         PostProcess::fppore_time.resize(0);

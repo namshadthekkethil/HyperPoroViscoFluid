@@ -559,8 +559,8 @@ void PostProcess::update_postprocess(EquationSystems &es,
   if (rank == 0) {
     ofstream file1;
     file1.open("surface_force.dat", ios::app);
-    file1 << InputParam::ttime << " " << force_p_total << " "
-          << force_ppore_total << " "<<m_net_total<< endl;
+    file1 << InputParam::time_itr * InputParam::dt << " " << force_p_total << " "
+          << force_ppore_total << " " << m_net_total << " " << InputParam::torsion_t << endl;
     file1.close();
 
   }

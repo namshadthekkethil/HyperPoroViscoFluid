@@ -198,6 +198,10 @@ void BoundaryCond::compute_torsion() {
     else
       InputParam::torsion_t = InputParam::bead_disp*InputParam::a_bead;
   }
+  else if (InputParam::torsion_type == 5)
+  {
+    InputParam::torsion_t = InputParam::bead_disp * InputParam::a_bead * sin(InputParam::omega * InputParam::ttime);
+  }
 }
 
 void BoundaryCond::apply_pressure(
@@ -462,13 +466,14 @@ void BoundaryCond::apply_torsion_resid(EquationSystems &es, const Elem *elem,
         Re_var[1](dof_i) = v_cur - InputParam::torsion_t *
                                        cos(0.5 * M_PI * pj(0)) *
                                        sin(0.5 * M_PI * pj(1));
-      } else if (InputParam::torsion_type == 4) {
+      }
+      else if (InputParam::torsion_type == 4 || InputParam::torsion_type == 5)
+      {
         Re_var[0](dof_i) = 1.0 * (u_cur - InputParam::torsion_t);
         Re_var[1](dof_i) = 1.0 * v_cur;
 #if (MESH_DIMENSION == 3)
         Re_var[2](dof_i) = 1.0 * w_cur;
 #endif
-
       }
 
       else if (InputParam::torsion_type == 10) {
@@ -534,7 +539,8 @@ void BoundaryCond::apply_torsion_jacob(
         Ke_var[0][0](dof_i, dof_i) = 1.0;
       }
 
-      else if (InputParam::torsion_type == 4) {
+      else if (InputParam::torsion_type == 4 || InputParam::torsion_type == 5)
+      {
         for (unsigned int dof_j = 0; dof_j < num_nodes; dof_j++) {
           for (unsigned int i = 0; i < MESH_DIMENSION + 1; i++) {
             Ke_var[0][i](dof_i, dof_j) = 0.0;

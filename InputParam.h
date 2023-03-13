@@ -106,7 +106,7 @@ public:
   static unsigned int mesh_centre;
   static unsigned int n_solves,n_total;
   static unsigned int output_terminal;
-  static double ttime, dt, time_per;
+  static double ttime, dt, time_per,omega;
   static int time_itr;
 
   static int inertia, trans_soln;

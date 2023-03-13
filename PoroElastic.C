@@ -3026,8 +3026,10 @@ void PoroElastic::update_flowlarge(EquationSystems &es, EquationSystems &es_flui
       dof_map_fluid.dof_indices(elem_fluid, dof_indices_p, 1);
 
       double dist_2 = pow(x_elem - VesselFlow::vessels_in[n].x2, 2) +
-                      pow(y_elem - VesselFlow::vessels_in[n].y2, 2) +
-                      pow(z_elem - VesselFlow::vessels_in[n].z2, 2);
+                      pow(y_elem - VesselFlow::vessels_in[n].y2, 2);
+#if (MESH_DIMENSION == 3)
+      dist_2 += pow(z_elem - VesselFlow::vessels_in[n].z2, 2);
+#endif
       source_cur += a_const * exp(b_const * (dist_2)) * flow_vec[dof_indices_u[1]] *
                     sqrt(VesselFlow::p_0 / VesselFlow::rho_v) * VesselFlow::L_v * VesselFlow::L_v * (1.0e-3 / mesh_volume);
 
@@ -3216,6 +3218,7 @@ void PoroElastic::update_aha(EquationSystems &es)
 
     double angle_e = atan2(y_elem, x_elem)*(180.0/3.14159)+180.0;
 
+#if (MESH_DIMENSION == 3)
     if(z_elem > 40.0)
     {
       if(angle_e <=60.0)
@@ -3261,6 +3264,7 @@ void PoroElastic::update_aha(EquationSystems &es)
       else
         aha_cur = 13.0;
     }
+#endif
 
 
     const int dof_index_aha = elem->dof_number(system_aha.number(), 0, 0);

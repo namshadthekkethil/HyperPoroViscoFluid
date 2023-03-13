@@ -9,7 +9,7 @@ std::string InputParam::mesh_file_name, InputParam::fibre_file_name,
 unsigned int InputParam::mesh_centre;
 unsigned int InputParam::n_solves,InputParam::n_total;
 unsigned int InputParam::output_terminal;
-double InputParam::ttime, InputParam::dt,InputParam::time_per;
+double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
 int InputParam::time_itr;
 int InputParam::inertia, InputParam::trans_soln;
 
