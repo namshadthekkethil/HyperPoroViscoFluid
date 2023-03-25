@@ -105,6 +105,7 @@ public:
 
   static DenseMatrix<double> FP, FPPORE,NETM,FPRATE,FPPORERATE,FTOTALRATE;
   static vector<double> fp_time,fppore_time,ftotal_time;
+  static string file_surface_force, file_FbyS, file_FbyS_log;
 
   static void compute_vA(EquationSystems &es, double &u_A, double &v_A,
                          double &p_A, double &I4f_A, double &ppore_A);

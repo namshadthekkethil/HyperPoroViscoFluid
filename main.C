@@ -209,21 +209,27 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
   GetPot infile1("input.in");
   std::string output_file_name = infile1("output_file_name", "output.e");
 
-  string name = "output_";
+  string name = "results/output_";
   string fileend = ".e";
   string out_frame;
   char numstr[21];
-  sprintf(numstr, "%d", 0);
-  out_frame = name + numstr + fileend;
+  char numstr_vtaubya[21];
+  sprintf(numstr_vtaubya, "%.0e", InputParam::Vtaubya(0));
 
-  string name_results = "results_";
+  string file_underscore = "_";
+
+  char numstr_vabyd[21];
+  sprintf(numstr_vabyd, "%.0e", InputParam::VabyD(0));
+  out_frame = name + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
+
+  string name_results = "results/results_";
   fileend = ".dat";
-  string out_results = name_results + numstr + fileend;
+  string out_results = name_results + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
 
   double m_total=0.0,J_total=0.0;
 
   ofstream file_result;
-  file_result.open(name_results, ios::out);
+  file_result.open(out_results, ios::out);
   file_result.close();
 
   LinearImplicitSystem &system_incomp =
@@ -260,7 +266,10 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
     run_time_step_fluid(es_fluid, mesh_fluid, rank, init,count);
     #endif
 
-    count_per = fmod(count, InputParam::n_solves);
+    if (InputParam::torsion_type == 4)
+      count_per = count;
+    else
+      count_per = fmod(count, InputParam::n_solves);
     InputParam::ttime = count_per*InputParam::dt;
 
     BoundaryCond::compute_pressure();
@@ -316,7 +325,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
       exo_io.write_timestep(out_frame, es, count_write, InputParam::ttime);
     }
 
-    file_result.open(name_results, ios::app);
+    file_result.open(out_results, ios::app);
     PostProcess::compute_skeleton_volume(es, es_cur, J_total, m_total);
     file_result<<InputParam::time_itr*InputParam::dt<<" "<<J_total<<" "<<m_total<<endl;
     file_result.close();
@@ -430,13 +439,58 @@ int main(int argc, char **argv)
   MPI_Comm_size(MPI_COMM_WORLD, &np);
 
   InputParam::read_input();
+
+
+  if(InputParam::var_v_a == 2)
+  {
+    InputParam::Vtaubya(0) = atof(argv[1]);
+
+    if(atoi(argv[2]) == 0)
+		InputParam::VabyD(0) = 2.0e-5;
+	else if(atoi(argv[2]) == 1)
+		InputParam::VabyD(0) = 5.0e-5;
+	else if(atoi(argv[2]) == 2)
+		InputParam::VabyD(0) = 1.0e-4;
+	else if(atoi(argv[2]) == 3)
+		InputParam::VabyD(0) = 2.0e-4;
+	else if(atoi(argv[2]) == 4)
+		InputParam::VabyD(0) = 5.0e-4;
+	else if(atoi(argv[2]) == 5)
+		InputParam::VabyD(0) = 1.0e-3;
+	else if(atoi(argv[2]) == 6)
+		InputParam::VabyD(0) = 2.0e-3;
+	else if(atoi(argv[2]) == 7)
+		InputParam::VabyD(0) = 5.0e-3;
+	else if(atoi(argv[2]) == 8)
+		InputParam::VabyD(0) = 1.0e-2;
+	else if(atoi(argv[2]) == 9)
+		InputParam::VabyD(0) = 2.0e-2;
+	else if(atoi(argv[2]) == 10)
+		InputParam::VabyD(0) = 5.0e-2;
+	else if(atoi(argv[2]) == 11)
+		InputParam::VabyD(0) = 1.0e-1;
+	else if(atoi(argv[2]) == 12)
+		InputParam::VabyD(0) = 2.0e-1;
+	else if(atoi(argv[2]) == 13)
+		InputParam::VabyD(0) = 5.0e-1;
+	else if(atoi(argv[2]) == 14)
+		InputParam::VabyD(0) = 1.0e-0;
+	else if(atoi(argv[2]) == 15)
+		InputParam::VabyD(0) = 2.0e-0;
+	else if(atoi(argv[2]) == 16)
+		InputParam::VabyD(0) = 5.0e-0;
+	else if(atoi(argv[2]) == 17)
+		InputParam::VabyD(0) = 1.0e1;
+  }
+
+
   PostProcess::init_postprocess(rank);
 
   cout << "Initialise postprocess" << endl;
 
   auto start = high_resolution_clock::now();
 
-  if (InputParam::var_v_a == 1)
+  if (InputParam::var_v_a == 1 || InputParam::var_v_a == 2)
   {
     for (int ii = 0; ii < InputParam::vtaubya_size; ii++)
     {
@@ -484,6 +538,8 @@ int main(int argc, char **argv)
     }
     PostProcess::write_final(rank);
   }
+  
+
 
   else
   {

@@ -8,6 +8,8 @@ PostProcess::FPRATE,PostProcess::FPPORERATE,PostProcess::FTOTALRATE;
 
 vector<double> PostProcess::fp_time,PostProcess::fppore_time,PostProcess::ftotal_time;
 
+string PostProcess::file_surface_force, PostProcess::file_FbyS, PostProcess::file_FbyS_log;
+
 using namespace libMesh;
 using namespace std;
 
@@ -537,17 +539,36 @@ void PostProcess::init_postprocess(int rank) {
   FPRATE.resize(InputParam::vtaubya_size, InputParam::vabyd_size);
   FPPORERATE.resize(InputParam::vtaubya_size, InputParam::vabyd_size);
   FTOTALRATE.resize(InputParam::vtaubya_size, InputParam::vabyd_size);
+
+  string surface_force_name = "results/surface_force_";
+  string FbyS_name = "results/FbyS_";
+  string FbyS_log_name = "results/FbyS_log_";
+
+  string fileend = ".dat";
+
+  char numstr_vtaubya[21];
+  sprintf(numstr_vtaubya, "%.0e", InputParam::Vtaubya(0));
+
+  string file_underscore = "_";
+
+  char numstr_vabyd[21];
+  sprintf(numstr_vabyd, "%.0e", InputParam::VabyD(0));
+
+  file_surface_force = surface_force_name + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
+  file_FbyS = FbyS_name + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
+  file_FbyS_log = FbyS_log_name + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
+
   if (rank == 0) {
     ofstream file1;
-    file1.open("surface_force.dat", ios::out);
+    file1.open(file_surface_force, ios::out);
     file1.close();
 
     ofstream file_F;
-    file_F.open("FbyS.dat", ios::out);
+    file_F.open(file_FbyS, ios::out);
     file_F.close();
 
     ofstream file_F_log;
-    file_F_log.open("FbyS_log.dat", ios::out);
+    file_F_log.open(file_FbyS_log, ios::out);
     file_F_log.close();
   }
 }
@@ -558,7 +579,7 @@ void PostProcess::update_postprocess(EquationSystems &es,
   compute_net_m(es);
   if (rank == 0) {
     ofstream file1;
-    file1.open("surface_force.dat", ios::app);
+    file1.open(file_surface_force, ios::app);
     file1 << InputParam::time_itr * InputParam::dt << " " << force_p_total << " "
           << force_ppore_total << " " << m_net_total << " " << InputParam::torsion_t << endl;
     file1.close();
@@ -639,8 +660,8 @@ void PostProcess::write_final(int rank) {
       if (rank == 0) {
         ofstream file_F;
         ofstream file_F_log;
-        file_F.open("FbyS.dat", ios::app);
-        file_F_log.open("FbyS_log.dat", ios::app);
+        file_F.open(file_FbyS, ios::app);
+        file_F_log.open(file_FbyS_log, ios::app);
         file_F << InputParam::Vtaubya(ii) << " " << InputParam::VabyD(jj) << " "
                << FP(ii, jj) << " " << FPPORE(ii, jj) << " "<<NETM(ii,jj)<< " "
                <<FPRATE(ii,jj)<< " "<<FPPORERATE(ii,jj)<<" "<<FTOTALRATE(ii,jj)<<endl;
