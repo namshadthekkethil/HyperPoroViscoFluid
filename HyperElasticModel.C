@@ -382,7 +382,7 @@ void HyperElasticModel::compute_D()
             if (InputParam::strain_model == 1)
             {
               Dmat.D[i][j][k][l] +=
-                  exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela)) *
+                  exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela)) * ViscoElastic::beta_visela *
                       (HOModel::Dmat.Diso[i][j][k][l] +
                        HOModel::Dmat.Df[i][j][k][l] +
                        HOModel::Dmat.Ds[i][j][k][l] +
@@ -392,7 +392,7 @@ void HyperElasticModel::compute_D()
             else if (InputParam::strain_model == 2)
             {
               Dmat.D[i][j][k][l] +=
-                  exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela)) *
+                  exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela)) * ViscoElastic::beta_visela *
                       (NeoHook::Dmat.Diso[i][j][k][l]) +
                   NeoHook::Dmat.Dp[i][j][k][l];
             }
@@ -400,7 +400,7 @@ void HyperElasticModel::compute_D()
             else if (InputParam::strain_model == 3)
             {
               Dmat.D[i][j][k][l] +=
-                  (exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela))) *
+                  (exp(-InputParam::dt / (2.0 * ViscoElastic::tau_visela))) * ViscoElastic::beta_visela *
                       (CellFibre::Dmat.Diso[i][j][k][l] +
                        CellFibre::Dmat.Df[i][j][k][l] +
                        CellFibre::Dmat.Ds[i][j][k][l]) +
