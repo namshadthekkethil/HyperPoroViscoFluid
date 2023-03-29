@@ -132,6 +132,12 @@ void HyperElasticModel::init_hyperelastic_model(EquationSystems &es, int rank)
   Incompress::dt = InputParam::dt;
   Incompress::time_itr = InputParam::time_itr;
 
+  if (InputParam::inertia == 0)
+  {
+    Stabilisation::steady_stab = 1;
+    Incompress::steady_stab = 1;
+  }
+
   Stabilisation::rho_s = InputParam::rho_s;
   Stabilisation::alpha_stab = InputParam::alpha_stab;
   Stabilisation::dt = InputParam::dt;
@@ -464,6 +470,7 @@ void HyperElasticModel::compute_param_resid_qp(
     const std::vector<std::vector<RealGradient>> &dphi)
 {
   GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
+  Stabilisation::compute_tau_elem(es, elem);
 
   compute_PK2(es, elem);
 
@@ -480,6 +487,7 @@ void HyperElasticModel::compute_param_jacob_qp(
     const std::vector<std::vector<RealGradient>> &dphi)
 {
   GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
+  Stabilisation::compute_tau_elem(es, elem);
   TensorDer::compute_dJdF();
   TensorDer::compute_dJFinvTdF();
 
@@ -507,8 +515,8 @@ void HyperElasticModel::compute_param_resid_dofi(
 
   for (unsigned int i = 0; i < MESH_DIMENSION; i++)
   {
-
-    Resid(i) += phi[dof_i][qp] * (InputParam::rho_s * GeomPar::acc_vec(i));
+    if (InputParam::inertia != 0)
+      Resid(i) += phi[dof_i][qp] * (InputParam::rho_s * GeomPar::acc_vec(i));
     for (unsigned int j = 0; j < MESH_DIMENSION; j++)
     {
       Resid(i) += (P(i, j) * dphi[dof_i][qp](j));
@@ -560,11 +568,13 @@ void HyperElasticModel::compute_param_jacob_dofi_dofj(
       phi[dof_j][qp] * GeomPar::detF *
       (MatVecOper::contractMat(GeomPar::FInvTra, TensorDer::gradNAz));
 #endif
-
-  for (unsigned int i = 0; i < MESH_DIMENSION; i++)
-    Jacob(i, i) +=
-        (InputParam::rho_s * (1.0 / (InputParam::dt * InputParam::dt))) *
-        phi[dof_i][qp] * phi[dof_j][qp];
+  if (InputParam::inertia != 0)
+  {
+    for (unsigned int i = 0; i < MESH_DIMENSION; i++)
+      Jacob(i, i) +=
+          (InputParam::rho_s * (1.0 / (InputParam::dt * InputParam::dt))) *
+          phi[dof_i][qp] * phi[dof_j][qp];
+  }
 
   for (unsigned int i = 0; i < MESH_DIMENSION; i++)
     for (unsigned int j = 0; j < MESH_DIMENSION; j++)
