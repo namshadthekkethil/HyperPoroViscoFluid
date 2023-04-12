@@ -103,7 +103,7 @@
 #include "Admittance.h"
 #include "VesselFlow.h"
 
-#define FLUIDFLOW 1
+#define FLUIDFLOW 0
 
 using namespace libMesh;
 using namespace std;
@@ -310,7 +310,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
     HyperElasticModel::update_hyperelastic_model(es);
 
-    if ((count ) % 10 == 0 || InputParam::trans_soln == 0)
+    if ((count ) % 50 == 0 || InputParam::trans_soln == 0)
     {
       lde.compute_stresses();
       lde.compute_J();
@@ -446,41 +446,41 @@ int main(int argc, char **argv)
     InputParam::Vtaubya(0) = atof(argv[1]);
 
     if(atoi(argv[2]) == 0)
-		InputParam::VabyD(0) = 2.0e-5;
-	else if(atoi(argv[2]) == 1)
-		InputParam::VabyD(0) = 5.0e-5;
-	else if(atoi(argv[2]) == 2)
-		InputParam::VabyD(0) = 1.0e-4;
-	else if(atoi(argv[2]) == 3)
-		InputParam::VabyD(0) = 2.0e-4;
-	else if(atoi(argv[2]) == 4)
-		InputParam::VabyD(0) = 5.0e-4;
-	else if(atoi(argv[2]) == 5)
 		InputParam::VabyD(0) = 1.0e-3;
-	else if(atoi(argv[2]) == 6)
+	else if(atoi(argv[2]) == 1)
 		InputParam::VabyD(0) = 2.0e-3;
-	else if(atoi(argv[2]) == 7)
+	else if(atoi(argv[2]) == 2)
 		InputParam::VabyD(0) = 5.0e-3;
-	else if(atoi(argv[2]) == 8)
+	else if(atoi(argv[2]) == 3)
 		InputParam::VabyD(0) = 1.0e-2;
-	else if(atoi(argv[2]) == 9)
+	else if(atoi(argv[2]) == 4)
 		InputParam::VabyD(0) = 2.0e-2;
-	else if(atoi(argv[2]) == 10)
+	else if(atoi(argv[2]) == 5)
 		InputParam::VabyD(0) = 5.0e-2;
-	else if(atoi(argv[2]) == 11)
+	else if(atoi(argv[2]) == 6)
 		InputParam::VabyD(0) = 1.0e-1;
-	else if(atoi(argv[2]) == 12)
+	else if(atoi(argv[2]) == 7)
 		InputParam::VabyD(0) = 2.0e-1;
-	else if(atoi(argv[2]) == 13)
+	else if(atoi(argv[2]) == 8)
 		InputParam::VabyD(0) = 5.0e-1;
-	else if(atoi(argv[2]) == 14)
-		InputParam::VabyD(0) = 1.0e-0;
-	else if(atoi(argv[2]) == 15)
-		InputParam::VabyD(0) = 2.0e-0;
-	else if(atoi(argv[2]) == 16)
-		InputParam::VabyD(0) = 5.0e-0;
-	else if(atoi(argv[2]) == 17)
+	else if(atoi(argv[2]) == 9)
+		InputParam::VabyD(0) = 1.0e0;
+	else if(atoi(argv[2]) == 10)
+		InputParam::VabyD(0) = 2.0e0;
+	else if(atoi(argv[2]) == 11)
+		InputParam::VabyD(0) = 5.0e0;
+	else if(atoi(argv[2]) == 12)
 		InputParam::VabyD(0) = 1.0e1;
+	else if(atoi(argv[2]) == 13)
+		InputParam::VabyD(0) = 2.0e1;
+	else if(atoi(argv[2]) == 14)
+		InputParam::VabyD(0) = 5.0e1;
+	else if(atoi(argv[2]) == 15)
+		InputParam::VabyD(0) = 1.0e2;
+	else if(atoi(argv[2]) == 16)
+		InputParam::VabyD(0) = 2.0e2;
+	else if(atoi(argv[2]) == 17)
+		InputParam::VabyD(0) = 5.0e2;
   }
 
 
@@ -496,12 +496,15 @@ int main(int argc, char **argv)
     {
       for (int jj = 0; jj < InputParam::vabyd_size; jj++)
       {
-        InputParam::V_bead =
-            sqrt(InputParam::Vtaubya(ii) * InputParam::VabyD(jj) *
-                 ((InputParam::permeability * InputParam::G) /
-                  InputParam::tau_visela));
-        InputParam::a_bead = (InputParam::V_bead * InputParam::tau_visela) /
-                             InputParam::Vtaubya(ii);
+        //InputParam::V_bead =
+            //sqrt(InputParam::Vtaubya(ii) * InputParam::VabyD(jj) *
+                 //((InputParam::permeability * InputParam::G) /
+                  //InputParam::tau_visela));
+        //InputParam::a_bead = (InputParam::V_bead * InputParam::tau_visela) /
+                             //InputParam::Vtaubya(ii);
+                             
+        InputParam::tau_visela = InputParam::Vtaubya(ii);
+        InputParam::permeability = 1.0/(InputParam::G*InputParam::VabyD(jj));
         InputParam::mesh_scale = InputParam::a_bead / 0.5;
 
         if (InputParam::torsion_type == 4)

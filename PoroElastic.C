@@ -52,7 +52,7 @@ void PoroElastic::read_input(int rank)
   source_prssr = infile("source_prssr", 0.1);
   sink_const = infile("sink_const", 0.0);
   sink_prssr = infile("sink_prssr", 0.0);
-  permeability = infile("permeability", 0.00000001);
+  permeability = InputParam::permeability; //infile("permeability", 0.00000001);
   ppore_penalty_on = infile("ppore_penalty_on", 0);
 
   kappa_0 = infile("kappa_0", 0.0);
