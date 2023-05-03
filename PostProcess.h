@@ -100,8 +100,8 @@ public:
   PostProcess();
   ~PostProcess();
 
-  static double force_p, force_ppore;
-  static double force_p_total, force_ppore_total,m_net_total;
+  static double force_p, force_ppore,force_visc;
+  static double force_p_total, force_ppore_total,m_net_total,force_visc_total;
 
   static DenseMatrix<double> FP, FPPORE,NETM,FPRATE,FPPORERATE,FTOTALRATE;
   static vector<double> fp_time,fppore_time,ftotal_time;

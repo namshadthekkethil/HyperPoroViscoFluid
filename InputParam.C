@@ -11,7 +11,7 @@ unsigned int InputParam::n_solves,InputParam::n_total;
 unsigned int InputParam::output_terminal;
 double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
 int InputParam::time_itr;
-int InputParam::inertia, InputParam::trans_soln;
+int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman;
 
 double InputParam::nonlinear_abs_tol, InputParam::nonlinear_rel_tol;
 unsigned int InputParam::nonlinear_max_its;
@@ -25,7 +25,10 @@ double InputParam::G;
 
 double InputParam::alpha_stab, InputParam::rho_s;
 
-boundary_id_type InputParam::clamp_x_size, InputParam::clamp_y_size;
+double InputParam::viscocity;
+
+    boundary_id_type InputParam::clamp_x_size,
+    InputParam::clamp_y_size;
 DenseVector<boundary_id_type> InputParam::clamp_x_bcs, InputParam::clamp_y_bcs;
 #if (MESH_DIMENSION == 3)
 boundary_id_type InputParam::clamp_z_size;
@@ -249,6 +252,8 @@ void InputParam::read_input() {
   var_v_a = infile("var_v_a", 0);
 
   porous = infile("porous", 0);
+  brinkman = infile("brinkman", 0);
+  viscocity = infile("viscocity", 0.001);
 
   infile.print();
 }

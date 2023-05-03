@@ -1,12 +1,12 @@
 #include "PostProcess.h"
 
-double PostProcess::force_p, PostProcess::force_ppore;
-double PostProcess::force_p_total, PostProcess::force_ppore_total,PostProcess::m_net_total;
+double PostProcess::force_p, PostProcess::force_ppore, PostProcess::force_visc;
+double PostProcess::force_p_total, PostProcess::force_ppore_total, PostProcess::m_net_total, PostProcess::force_visc_total;
 
 DenseMatrix<double> PostProcess::FP, PostProcess::FPPORE, PostProcess::NETM,
-PostProcess::FPRATE,PostProcess::FPPORERATE,PostProcess::FTOTALRATE;
+    PostProcess::FPRATE, PostProcess::FPPORERATE, PostProcess::FTOTALRATE;
 
-vector<double> PostProcess::fp_time,PostProcess::fppore_time,PostProcess::ftotal_time;
+vector<double> PostProcess::fp_time, PostProcess::fppore_time, PostProcess::ftotal_time;
 
 string PostProcess::file_surface_force, PostProcess::file_FbyS, PostProcess::file_FbyS_log;
 
@@ -18,7 +18,8 @@ PostProcess::PostProcess() {}
 PostProcess::~PostProcess() {}
 
 void PostProcess::compute_vA(EquationSystems &es, double &u_A, double &v_A,
-                             double &p_A, double &I4f_A, double &ppore_A) {
+                             double &p_A, double &I4f_A, double &ppore_A)
+{
   NonlinearImplicitSystem &system =
       es.get_system<NonlinearImplicitSystem>("NonlinearElasticity");
 
@@ -52,7 +53,8 @@ void PostProcess::compute_vA(EquationSystems &es, double &u_A, double &v_A,
 }
 
 void PostProcess::compute_mixture_volume(EquationSystems &es,
-                                         double &mixture_volume) {
+                                         double &mixture_volume)
+{
   const MeshBase &mesh_cur = es.get_mesh();
 
   MeshBase::const_element_iterator el = mesh_cur.active_elements_begin();
@@ -61,7 +63,8 @@ void PostProcess::compute_mixture_volume(EquationSystems &es,
 
   mixture_volume = 0.0;
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     mixture_volume += elem->volume();
@@ -72,7 +75,8 @@ void PostProcess::compute_mixture_volume(EquationSystems &es,
 
 void PostProcess::compute_skeleton_volume(EquationSystems &es,
                                           EquationSystems &es_cur,
-                                          double &J_total, double &m_total) {
+                                          double &J_total, double &m_total)
+{
   const MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
@@ -95,7 +99,8 @@ void PostProcess::compute_skeleton_volume(EquationSystems &es,
 
   double elem_cur_vol = 0.0, elem_vol = 0.0, m_sum = 0.0;
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     const Elem *elem_cur = *el_cur;
@@ -115,7 +120,8 @@ void PostProcess::compute_skeleton_volume(EquationSystems &es,
 }
 
 void PostProcess::compute_L2_norm(EquationSystems &es, double &l2_dis_tot,
-                                  double &l2_vel_tot, double &l2_p_tot) {
+                                  double &l2_vel_tot, double &l2_p_tot)
+{
   MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
@@ -147,24 +153,28 @@ void PostProcess::compute_L2_norm(EquationSystems &es, double &l2_dis_tot,
   const MeshBase::const_element_iterator end_el =
       mesh.active_local_elements_end();
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     dof_map.dof_indices(elem, dof_indices);
     dof_map_l2_p.dof_indices(elem, dof_indices_l2_p);
-    for (unsigned int var = 0; var < dim + 1; var++) {
+    for (unsigned int var = 0; var < dim + 1; var++)
+    {
       dof_map.dof_indices(elem, dof_indices_var[var], var);
       dof_map_dis.dof_indices(elem, dof_indices_dis[var], var);
     }
 
-    for (unsigned int var = 0; var < dim; var++) {
+    for (unsigned int var = 0; var < dim; var++)
+    {
       dof_map_l2_dis.dof_indices(elem, dof_indices_l2_dis[var], var);
       dof_map_l2_vel.dof_indices(elem, dof_indices_l2_vel[var], var);
     }
 
     const unsigned int n_var_dofs = dof_indices_var[0].size();
 
-    for (unsigned int dof_i = 0; dof_i < n_var_dofs; dof_i++) {
+    for (unsigned int dof_i = 0; dof_i < n_var_dofs; dof_i++)
+    {
 
       double dx_sol = system_dis.current_solution(dof_indices_dis[0][dof_i]);
       double dy_sol = system_dis.current_solution(dof_indices_dis[1][dof_i]);
@@ -222,7 +232,8 @@ void PostProcess::compute_L2_norm(EquationSystems &es, double &l2_dis_tot,
 void PostProcess::compute_surface_ppore_m(EquationSystems &es, double &m_0,
                                           double &ppore_0, double &lambda_0,
                                           double &m_1, double &ppore_1,
-                                          double &lambda_1) {
+                                          double &lambda_1)
+{
   const MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
@@ -275,7 +286,8 @@ void PostProcess::compute_surface_ppore_m(EquationSystems &es, double &m_0,
   MeshBase::const_element_iterator el = mesh.active_elements_begin();
   const MeshBase::const_element_iterator end_el = mesh.active_elements_end();
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     dof_map_m.dof_indices(elem, dof_indices_m, dim + 1);
@@ -283,21 +295,25 @@ void PostProcess::compute_surface_ppore_m(EquationSystems &es, double &m_0,
     dof_map_lambda.dof_indices(elem, dof_indices_lambda, dim);
 
     for (unsigned int side = 0; side < elem->n_sides(); side++)
-      if (elem->neighbor_ptr(side) == libmesh_nullptr) {
+      if (elem->neighbor_ptr(side) == libmesh_nullptr)
+      {
         const std::vector<std::vector<Real>> &phi_face = fe_face->get_phi();
         const std::vector<Real> &JxW_face = fe_face->get_JxW();
 
         fe_face->reinit(elem, side);
 
-        for (unsigned int qp = 0; qp < qface.n_points(); qp++) {
+        for (unsigned int qp = 0; qp < qface.n_points(); qp++)
+        {
           vector<boundary_id_type> bc_id_vec;
           mesh.boundary_info->boundary_ids(elem, side, bc_id_vec);
           short int bc_id =
               bc_id_vec[0]; // mesh.boundary_info->boundary_id(elem, side);
 
-          if (bc_id == 0) {
+          if (bc_id == 0)
+          {
             double m_cur = 0.0, ppore_cur = 0.0, lambda_cur = 0.0;
-            for (std::size_t i = 0; i < phi_face.size(); i++) {
+            for (std::size_t i = 0; i < phi_face.size(); i++)
+            {
               m_cur += m_vec[dof_indices_m[i]] * phi_face[i][qp];
               ppore_cur += ppore_vec[dof_indices_ppore[i]] * phi_face[i][qp];
               lambda_cur += lambda_vec[dof_indices_lambda[i]] * phi_face[i][qp];
@@ -308,9 +324,11 @@ void PostProcess::compute_surface_ppore_m(EquationSystems &es, double &m_0,
             area_0 += JxW_face[qp];
           }
 
-          if (bc_id == 5) {
+          if (bc_id == 5)
+          {
             double m_cur = 0.0, ppore_cur = 0.0, lambda_cur = 0.0;
-            for (std::size_t i = 0; i < phi_face.size(); i++) {
+            for (std::size_t i = 0; i < phi_face.size(); i++)
+            {
               m_cur += m_vec[dof_indices_m[i]] * phi_face[i][qp];
               ppore_cur += ppore_vec[dof_indices_ppore[i]] * phi_face[i][qp];
               lambda_cur += lambda_vec[dof_indices_lambda[i]] * phi_face[i][qp];
@@ -338,7 +356,8 @@ void PostProcess::compute_surface_ppore_m(EquationSystems &es, double &m_0,
 }
 
 void PostProcess::compute_surface_force(EquationSystems &es,
-                                        EquationSystems &es_cur) {
+                                        EquationSystems &es_cur)
+{
   const MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
 
@@ -413,8 +432,10 @@ void PostProcess::compute_surface_force(EquationSystems &es,
 
   force_p = 0.0;
   force_ppore = 0.0;
+  force_visc = 0.0;
 
-  for (; el != end_el; ++el) {
+  for (; el != end_el; ++el)
+  {
     const Elem *elem = *el;
 
     dof_map.dof_indices(elem, dof_indices_lambda, MESH_DIMENSION);
@@ -423,7 +444,8 @@ void PostProcess::compute_surface_force(EquationSystems &es,
     dof_map_ppore.dof_indices(elem, dof_indices_ppore, 0);
     // #endif
 
-    for (unsigned int var = 0; var < dim; var++) {
+    for (unsigned int var = 0; var < dim; var++)
+    {
       dof_map_darcy.dof_indices(elem, dof_indices_darcy[var], var);
     }
 
@@ -454,13 +476,18 @@ void PostProcess::compute_surface_force(EquationSystems &es,
 #endif
 
     for (unsigned int side = 0; side < elem->n_sides(); side++)
-      if (elem->neighbor_ptr(side) == libmesh_nullptr) {
+      if (elem->neighbor_ptr(side) == libmesh_nullptr)
+      {
 
         const std::vector<std::vector<Real>> &phi_face = fe_face->get_phi();
+        const std::vector<std::vector<RealGradient>> &dphi_face =
+            fe_face->get_dphi();
         const std::vector<Real> &JxW_face = fe_face->get_JxW();
 
         const std::vector<Point> &normal_face = fe_face->get_normals();
         const std::vector<Point> &Xref = fe_face->get_xyz();
+        const std::vector<vector<Point>> &tangent_face =
+            fe_face->get_tangents();
 
         const std::vector<std::vector<Real>> &phi_face_cur =
             fe_face_cur->get_phi();
@@ -470,16 +497,19 @@ void PostProcess::compute_surface_force(EquationSystems &es,
         fe_face->reinit(elem, side);
         fe_face_cur->reinit(elem, side);
 
-        for (unsigned int qp = 0; qp < qface.n_points(); qp++) {
+        for (unsigned int qp = 0; qp < qface.n_points(); qp++)
+        {
           vector<boundary_id_type> bc_id_vec;
           mesh.boundary_info->boundary_ids(elem, side, bc_id_vec);
           short int bc_id =
               bc_id_vec[0]; // mesh.boundary_info->boundary_id(elem, side);
 
-          if (bc_id == 5) {
+          if (bc_id == 5)
+          {
 
             double lambda_cur = 0.0, ppore_cur = 0.0;
-            for (std::size_t i = 0; i < phi_face.size(); i++) {
+            for (std::size_t i = 0; i < phi_face.size(); i++)
+            {
               lambda_cur += phi_face[i][qp] *
                             system.current_solution(dof_indices_lambda[i]);
 
@@ -521,6 +551,34 @@ void PostProcess::compute_surface_force(EquationSystems &es,
 
             force_ppore += normal_face_cur[qp].operator()(0) *
                            JxW_face_cur[qp] * (-ppore_cur);
+
+            if (InputParam::brinkman == 1)
+            {
+
+              DenseVector<double> gradWt(dim);
+              for (std::size_t i = 0; i < phi_face.size(); i++)
+              {
+                for (unsigned int var_i = 0; var_i < dim; var_i++)
+                {
+                  for (unsigned int var_j = 0; var_j < dim; var_j++)
+                  {
+                    gradWt(var_i) += dphi_face[i][qp](var_i) *
+                                     darcy_system.current_solution(
+                                         dof_indices_darcy[var_j][i]) *
+                                     tangent_face[qp][0].operator()(var_j);
+                  }
+                }
+              }
+
+              double dWdt = 0.0;
+              for (unsigned int var_j = 0; var_j < dim; var_j++)
+              {
+                dWdt += gradWt(var_j) * normal_face[qp].operator()(var_j);
+              }
+
+              force_visc += InputParam::viscocity * dWdt *
+                            tangent_face[qp][0].operator()(0) * JxW_face_cur[qp];
+            }
           }
         }
       }
@@ -530,9 +588,12 @@ void PostProcess::compute_surface_force(EquationSystems &es,
                 MPI_COMM_WORLD);
   MPI_Allreduce(&force_ppore, &force_ppore_total, 1, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
+  MPI_Allreduce(&force_visc, &force_visc_total, 1, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
 }
 
-void PostProcess::init_postprocess(int rank) {
+void PostProcess::init_postprocess(int rank)
+{
   FP.resize(InputParam::vtaubya_size, InputParam::vabyd_size);
   FPPORE.resize(InputParam::vtaubya_size, InputParam::vabyd_size);
   NETM.resize(InputParam::vtaubya_size, InputParam::vabyd_size);
@@ -558,7 +619,8 @@ void PostProcess::init_postprocess(int rank) {
   file_FbyS = FbyS_name + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
   file_FbyS_log = FbyS_log_name + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
 
-  if (rank == 0) {
+  if (rank == 0)
+  {
     ofstream file1;
     file1.open(file_surface_force, ios::out);
     file1.close();
@@ -574,23 +636,23 @@ void PostProcess::init_postprocess(int rank) {
 }
 
 void PostProcess::update_postprocess(EquationSystems &es,
-                                     EquationSystems &es_cur, int rank) {
+                                     EquationSystems &es_cur, int rank)
+{
   compute_surface_force(es, es_cur);
   compute_net_m(es);
-  if (rank == 0) {
+  if (rank == 0)
+  {
     ofstream file1;
     file1.open(file_surface_force, ios::app);
     file1 << InputParam::time_itr * InputParam::dt << " " << force_p_total << " "
-          << force_ppore_total << " " << m_net_total << " " << InputParam::torsion_t << endl;
+          << force_ppore_total << " " << m_net_total << " " << InputParam::torsion_t <<" "<<force_visc_total<< endl;
     file1.close();
-
   }
 
-  fp_time.push_back(force_p_total/InputParam::a_bead);
-  fppore_time.push_back(force_ppore_total/InputParam::a_bead);
-  ftotal_time.push_back((0.3*force_p_total+0.7*force_ppore_total)/InputParam::a_bead);
+  fp_time.push_back(force_p_total / InputParam::a_bead);
+  fppore_time.push_back(force_ppore_total / InputParam::a_bead);
+  ftotal_time.push_back((0.3 * force_p_total + 0.7 * force_ppore_total) / InputParam::a_bead);
 }
-
 
 void PostProcess::compute_net_m(EquationSystems &es)
 {
@@ -607,13 +669,11 @@ void PostProcess::compute_net_m(EquationSystems &es)
   NumericVector<double> &p_vec = *p_system.solution;
   int p_system_num = p_system.number();
 
-
   MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
   const MeshBase::const_element_iterator end_el =
       mesh.active_local_elements_end();
 
-
-  double m_net=0.0,p_net=0.0;
+  double m_net = 0.0, p_net = 0.0;
 
   for (; el != end_el; ++el)
   {
@@ -632,44 +692,46 @@ void PostProcess::compute_net_m(EquationSystems &es)
                 MPI_COMM_WORLD);
 }
 
-
 void PostProcess::update_force_rate(int i, int j)
 {
-  double dt_nondim = InputParam::dt*(InputParam::V_bead/InputParam::a_bead);
+  double dt_nondim = InputParam::dt * (InputParam::V_bead / InputParam::a_bead);
 
-  FPRATE(i,j) = 0.0;
-  FPPORERATE(i,j) = 0.0;
-  FTOTALRATE(i,j) = 0.0;
-  for(int n=InputParam::n_solves+1;n<fp_time.size();n++)
+  FPRATE(i, j) = 0.0;
+  FPPORERATE(i, j) = 0.0;
+  FTOTALRATE(i, j) = 0.0;
+  for (int n = InputParam::n_solves + 1; n < fp_time.size(); n++)
   {
-    FPRATE(i,j) += fabs(fp_time[n]-fp_time[n-1])/dt_nondim;
-    FPPORERATE(i,j) += fabs(fppore_time[n]-fppore_time[n-1])/dt_nondim;
-    FTOTALRATE(i,j) += fabs(ftotal_time[n]-ftotal_time[n-1])/dt_nondim;
+    FPRATE(i, j) += fabs(fp_time[n] - fp_time[n - 1]) / dt_nondim;
+    FPPORERATE(i, j) += fabs(fppore_time[n] - fppore_time[n - 1]) / dt_nondim;
+    FTOTALRATE(i, j) += fabs(ftotal_time[n] - ftotal_time[n - 1]) / dt_nondim;
   }
 
-  FPRATE(i,j) /= fp_time[InputParam::n_solves];
-  FPPORERATE(i,j) /= fppore_time[InputParam::n_solves];
-  FTOTALRATE(i,j) /= ftotal_time[InputParam::n_solves];
-
+  FPRATE(i, j) /= fp_time[InputParam::n_solves];
+  FPPORERATE(i, j) /= fppore_time[InputParam::n_solves];
+  FTOTALRATE(i, j) /= ftotal_time[InputParam::n_solves];
 }
 
-void PostProcess::write_final(int rank) {
-  
-  for (int jj = 0; jj < InputParam::vabyd_size; jj++) {
-    for (int ii = 0; ii < InputParam::vtaubya_size; ii++) {
-      if (rank == 0) {
+void PostProcess::write_final(int rank)
+{
+
+  for (int jj = 0; jj < InputParam::vabyd_size; jj++)
+  {
+    for (int ii = 0; ii < InputParam::vtaubya_size; ii++)
+    {
+      if (rank == 0)
+      {
         ofstream file_F;
         ofstream file_F_log;
         file_F.open(file_FbyS, ios::app);
         file_F_log.open(file_FbyS_log, ios::app);
         file_F << InputParam::Vtaubya(ii) << " " << InputParam::VabyD(jj) << " "
-               << FP(ii, jj) << " " << FPPORE(ii, jj) << " "<<NETM(ii,jj)<< " "
-               <<FPRATE(ii,jj)<< " "<<FPPORERATE(ii,jj)<<" "<<FTOTALRATE(ii,jj)<<endl;
+               << FP(ii, jj) << " " << FPPORE(ii, jj) << " " << NETM(ii, jj) << " "
+               << FPRATE(ii, jj) << " " << FPPORERATE(ii, jj) << " " << FTOTALRATE(ii, jj) << endl;
 
         file_F_log << log(InputParam::Vtaubya(ii)) << " "
                    << log(InputParam::VabyD(jj)) << " " << FP(ii, jj) << " "
-                   << FPPORE(ii, jj) <<" "<<NETM(ii,jj)<< " "
-               <<FPRATE(ii,jj)<< " "<<FPPORERATE(ii,jj)<<" "<<FTOTALRATE(ii,jj)<< endl;
+                   << FPPORE(ii, jj) << " " << NETM(ii, jj) << " "
+                   << FPRATE(ii, jj) << " " << FPPORERATE(ii, jj) << " " << FTOTALRATE(ii, jj) << endl;
         file_F.close();
         file_F_log.close();
       }

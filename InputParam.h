@@ -165,7 +165,8 @@ public:
 
   static int var_v_a;
 
-  static int porous;
+  static int porous,brinkman;
+  static double viscocity;
 
   static void read_input();
   static void read_mesh(Mesh &mesh);
