@@ -25,6 +25,8 @@ double InputParam::G;
 
 double InputParam::alpha_stab, InputParam::rho_s;
 
+double InputParam::kappa_0;
+
 double InputParam::viscocity;
 
     boundary_id_type InputParam::clamp_x_size,
@@ -120,6 +122,8 @@ void InputParam::read_input() {
   G = infile("G", 1540.0);
 
   rho_s = infile("rho_s", 1.0);
+
+  kappa_0 = infile("kappa_0", 0.0);
 
   alpha_stab = infile("alpha_stab", 0.028);
 

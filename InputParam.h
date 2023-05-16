@@ -121,6 +121,8 @@ public:
 
   static double alpha_stab, rho_s;
 
+  static double kappa_0;
+
   static boundary_id_type clamp_x_size, clamp_y_size;
   static DenseVector<boundary_id_type> clamp_x_bcs, clamp_y_bcs;
 #if (MESH_DIMENSION == 3)

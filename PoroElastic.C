@@ -104,8 +104,10 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
   LinearImplicitSystem &system_dmdt =
       es.add_system<LinearImplicitSystem>("dmdtSystem");
 
-
-  
+  LinearImplicitSystem &system_mexp =
+      es.add_system<LinearImplicitSystem>("mExpSystem");
+  system_mexp.add_variable("mExpVar", FIRST, LAGRANGE);
+  system_mexp.attach_assemble_function(assemble_mexp);
 
   system_pmat.add_variable("pMatVar",
                            Utility::string_to_enum<Order>(approx_order),
@@ -2086,6 +2088,7 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
   compute_mmono(es);
   update_ppore(es);
   solve_darcy(es);
+  solve_mexp_system(es);
 
   time_itr++;
 }
@@ -2639,12 +2642,21 @@ void PoroElastic::solve_flow_system(EquationSystems &es)
   system_flow.solve();
 }
 
+void PoroElastic::solve_mexp_system(EquationSystems &es)
+{
+  LinearImplicitSystem &system_mexp =
+      es.get_system<LinearImplicitSystem>("mExpSystem");
+
+  system_mexp.solve();
+}
+
 void PoroElastic::solve_darcy(EquationSystems &es)
 {
   LinearImplicitSystem &system_darcy =
       es.get_system<LinearImplicitSystem>("darcy_velocity");
 
   system_darcy.solve();
+
 
   if (brinkman == 1)
   {
@@ -3309,4 +3321,178 @@ void PoroElastic::update_aha(EquationSystems &es)
 
     VesselFlow::ahaVolume[aha_ind - 1] += vol_el;
   }
+}
+
+void PoroElastic::assemble_mexp(
+    EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
+{
+  // Get a constant reference to the mesh object.
+  const MeshBase &mesh = es.get_mesh();
+
+  // The dimension that we are running
+  const unsigned int dim = mesh.mesh_dimension();
+
+  // Get a reference to the Stokes system object.
+  LinearImplicitSystem &flow_system =
+      es.get_system<LinearImplicitSystem>("mExpSystem");
+
+  unsigned int u_var;
+
+  System &K_system = es.get_system<System>("KSystem");
+  const DofMap &K_dof_map = K_system.get_dof_map();
+
+  System &system_source = es.get_system<System>("sourceSystem");
+  unsigned int system_source_num = system_source.number();
+
+  LinearImplicitSystem &darcy_system =
+      es.get_system<LinearImplicitSystem>("darcy_velocity");
+  const DofMap &dof_map_darcy = darcy_system.get_dof_map();
+
+  std::vector<std::vector<dof_id_type>> dof_indices_darcy(dim);
+
+  // Numeric ids corresponding to each variable in the system
+  u_var = flow_system.variable_number("mExpVar");
+  FEType fe_vel_type = flow_system.variable_type(u_var);
+  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
+  QGauss qrule(dim, CONSTANT);
+
+  // Tell the finite element objects to use our quadrature rule.
+  fe_vel->attach_quadrature_rule(&qrule);
+
+  UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
+  QGauss qface(dim - 1,
+               CONSTANT); // Not sure what the
+                          // best accuracy is here
+
+  fe_face->attach_quadrature_rule(&qface);
+
+  const std::vector<double> &JxW = fe_vel->get_JxW();
+  const std::vector<std::vector<double>> &phi = fe_vel->get_phi();
+  const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
+
+  const DofMap &dof_map = flow_system.get_dof_map();
+
+  // Define data structures to contain the element matrix
+  // and right-hand-side vector contribution.  Following
+  // basic finite element terminology we will denote these
+  // "Ke" and "Fe".
+  DenseMatrix<double> Ke;
+  DenseVector<double> Fe;
+
+  DenseSubMatrix<double> Kmm(Ke);
+
+  DenseSubVector<double> Fm(Fe);
+
+  // This vector will hold the degree of freedom indices for
+  // the element.  These define where in the global system
+  // the element degrees of freedom get mapped.
+  std::vector<dof_id_type> dof_indices;
+  std::vector<dof_id_type> dof_indices_m;
+
+  // Now we will loop over all the elements in the mesh that
+  // live on the local processor. We will compute the element
+  // matrix and right-hand-side contribution.  Since the mesh
+  // will be refined we want to only consider the ACTIVE elements,
+  // hence we use a variant of the active_elem_iterator.
+  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+  const MeshBase::const_element_iterator end_el =
+      mesh.active_local_elements_end();
+
+  double dmdx_left = 0.0, dmdx_right = 0.0;
+
+  for (; el != end_el; ++el)
+  {
+    // Store a pointer to the element we are currently
+    // working on.  This allows for nicer syntax later.
+    const Elem *elem = *el;
+
+    // Get the degree of freedom indices for the
+    // current element.  These define where in the global
+    // matrix and right-hand-side this element will
+    // contribute to.
+    dof_map.dof_indices(elem, dof_indices);
+    dof_map.dof_indices(elem, dof_indices_m, 0);
+
+    for (unsigned int var = 0; var < dim; var++)
+    {
+      dof_map_darcy.dof_indices(elem, dof_indices_darcy[var], var);
+    }
+
+    unsigned int n_dofs, n_u_dofs;
+
+    n_dofs = dof_indices.size();
+    n_u_dofs = dof_indices_m.size();
+
+    fe_vel->reinit(elem);
+
+    Ke.resize(n_dofs, n_dofs);
+    Fe.resize(n_dofs);
+
+    Kmm.reposition(0, 0, n_u_dofs, n_u_dofs);
+
+    Fm.reposition(0, n_u_dofs);
+
+    const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
+    double source_cur = system_source.current_solution(dof_index_source);
+
+
+    // Now we will build the element matrix and right-hand-side.
+    // Constructing the RHS requires the solution and its
+    // gradient from the previous timestep.  This must be
+    // calculated at each quadrature point by summing the
+    // solution degree-of-freedom values by the appropriate
+    // weight functions.
+    for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
+    {
+
+      double m_old = 0.0;
+      for (unsigned int j = 0; j < n_u_dofs; j++)
+      {
+        m_old += phi[j][qp] * (flow_system.current_solution(dof_indices_m[j]));
+      }
+
+
+      DenseVector<double> w_cur(dim),JFinvW(dim);
+      for (unsigned int var_i = 0; var_i < dim; var_i++)
+      {
+        w_cur(var_i) = 0;
+        for (unsigned int j = 0; j < n_u_dofs; j++)
+        {
+          w_cur(var_i) += phi[j][qp] * darcy_system.current_solution(dof_indices_darcy[var_i][j]);
+        }
+      }
+
+      GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
+
+
+      GeomPar::FInv.vector_mult(JFinvW, w_cur);
+      JFinvW.scale(GeomPar::detF);
+
+          for (unsigned int dof_i = 0; dof_i < n_u_dofs; dof_i++)
+      {
+        DenseVector<double> gradNA;
+        gradNA.resize(MESH_DIMENSION);
+        for (unsigned int i = 0; i < dim; i++)
+        {
+          gradNA(i) = dphi[dof_i][qp](i);
+        }
+
+        Fm(dof_i) += ((m_old / dt) * phi[dof_i][qp]) * JxW[qp] +
+                     MatVecOper::contractVec(JFinvW, gradNA) * JxW[qp];
+
+        Fm(dof_i) += source_cur * phi[dof_i][qp] * JxW[qp];
+
+        // Matrix contributions for the uu and vv couplings.
+        for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
+        {
+
+          Kmm(dof_i, dof_j) +=
+              (1.0 / dt) * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
+        }
+      }
+    } // end of the quadrature point qp-loop
+
+    flow_system.matrix->add_matrix(Ke, dof_indices);
+    flow_system.rhs->add_vector(Fe, dof_indices);
+  } // end of element loop
 }

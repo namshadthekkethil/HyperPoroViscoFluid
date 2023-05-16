@@ -205,6 +205,10 @@ public:
   static void update_flowlarge(EquationSystems &es, EquationSystems &es_fluid);
 
   static void update_aha(EquationSystems &es);
+
+  static void assemble_mexp(EquationSystems &es,
+                            const std::string &libmesh_dbg_var(system_name));
+  static void solve_mexp_system(EquationSystems &es);
 };
 
 #endif
