@@ -1,7 +1,8 @@
 #include "PostProcess.h"
 
 double PostProcess::force_p, PostProcess::force_ppore, PostProcess::force_visc;
-double PostProcess::force_p_total, PostProcess::force_ppore_total, PostProcess::m_net_total, PostProcess::force_visc_total;
+double PostProcess::force_p_total, PostProcess::force_ppore_total, PostProcess::m_net_total, PostProcess::force_visc_total,
+    PostProcess::force_pmono_total, PostProcess::force_ppore_mono_total;
 
 DenseMatrix<double> PostProcess::FP, PostProcess::FPPORE, PostProcess::NETM,
     PostProcess::FPRATE, PostProcess::FPPORERATE, PostProcess::FTOTALRATE;
@@ -387,6 +388,14 @@ void PostProcess::compute_surface_force(EquationSystems &es,
   const DofMap &dof_map_darcy = darcy_system.get_dof_map();
   std::vector<std::vector<dof_id_type>> dof_indices_darcy(dim);
 
+  System &pmono_system = es.add_system<System>("pMonoSystem");
+  const DofMap &dof_map_pmono = pmono_system.get_dof_map();
+  std::vector<dof_id_type> dof_indices_pmono;
+
+  System &mmono_system = es.add_system<System>("porousp1p0System");
+  const DofMap &dof_map_mmono = mmono_system.get_dof_map();
+  std::vector<dof_id_type> dof_indices_mmono;
+
   system.solution->localize(*system.current_local_solution);
   NumericVector<double> &p_data = *(system.current_local_solution);
   p_data.close();
@@ -434,6 +443,9 @@ void PostProcess::compute_surface_force(EquationSystems &es,
   force_ppore = 0.0;
   force_visc = 0.0;
 
+  double force_pmono = 0.0;
+  double force_ppore_mono = 0.0;
+
   for (; el != end_el; ++el)
   {
     const Elem *elem = *el;
@@ -448,6 +460,15 @@ void PostProcess::compute_surface_force(EquationSystems &es,
     {
       dof_map_darcy.dof_indices(elem, dof_indices_darcy[var], var);
     }
+
+    dof_map_pmono.dof_indices(elem, dof_indices_pmono, 0);
+    dof_map_mmono.dof_indices(elem, dof_indices_mmono, dim);
+
+    double m_cur = 0.0, pmono_cur = 0.0;
+    m_cur += mmono_system.current_solution(dof_indices_mmono[0]);
+    pmono_cur += pmono_system.current_solution(dof_indices_pmono[0]);
+
+    double ppore_p1p0 = pmono_cur + InputParam::kappa_0 * m_cur;
 
     double sigma_00 = 0.0, sigma_01 = 0.0, sigma_02 = 0.0;
     double sigma_11 = 0.0, sigma_12 = 0.0;
@@ -552,6 +573,12 @@ void PostProcess::compute_surface_force(EquationSystems &es,
             force_ppore += normal_face_cur[qp].operator()(0) *
                            JxW_face_cur[qp] * (-ppore_cur);
 
+            force_pmono += normal_face_cur[qp].operator()(0) * JxW_face_cur[qp] *
+                           (-pmono_cur);
+
+            force_ppore_mono += normal_face_cur[qp].operator()(0) *
+                                JxW_face_cur[qp] * (-ppore_p1p0);
+
             if (InputParam::brinkman == 1)
             {
 
@@ -589,6 +616,11 @@ void PostProcess::compute_surface_force(EquationSystems &es,
   MPI_Allreduce(&force_ppore, &force_ppore_total, 1, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
   MPI_Allreduce(&force_visc, &force_visc_total, 1, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+
+  MPI_Allreduce(&force_pmono, &force_pmono_total, 1, MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD);
+  MPI_Allreduce(&force_ppore_mono, &force_ppore_mono_total, 1, MPI_DOUBLE, MPI_SUM,
                 MPI_COMM_WORLD);
 }
 
@@ -645,7 +677,7 @@ void PostProcess::update_postprocess(EquationSystems &es,
     ofstream file1;
     file1.open(file_surface_force, ios::app);
     file1 << InputParam::time_itr * InputParam::dt << " " << force_p_total << " "
-          << force_ppore_total << " " << m_net_total << " " << InputParam::torsion_t <<" "<<force_visc_total<< endl;
+          << force_ppore_total << " " << force_pmono_total << " " << force_ppore_mono_total << " " << m_net_total << " " << InputParam::torsion_t << " " << force_visc_total << endl;
     file1.close();
   }
 

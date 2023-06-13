@@ -179,10 +179,19 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
 System &system_flowlarge = es.add_system<System>("flowLargeSystem");
 system_flowlarge.add_variable("flowLargeVar", CONSTANT, MONOMIAL);
 
-  if (brinkman == 1)
-  {
-    LinearImplicitSystem &system_delw =
-        es.add_system<LinearImplicitSystem>("systemDelW");
+LinearImplicitSystem &system_porous_p1p0 =
+    es.add_system<LinearImplicitSystem>("porousp1p0System");
+system_porous_p1p0.add_variable("wxp1p0Var", FIRST, LAGRANGE);
+system_porous_p1p0.add_variable("wyp1p0Var", FIRST, LAGRANGE);
+#if (MESH_DIMENSION == 3)
+system_porous_p1p0.add_variable("wzp1p0Var", FIRST, LAGRANGE);
+#endif
+system_porous_p1p0.add_variable("mp1p0Var", CONSTANT, MONOMIAL);
+
+if (brinkman == 1)
+{
+  LinearImplicitSystem &system_delw =
+      es.add_system<LinearImplicitSystem>("systemDelW");
 #if (MESH_DIMENSION == 2)
     system_delw.add_variable("delW00", FIRST, LAGRANGE);
     system_delw.add_variable("delW01", FIRST, LAGRANGE);
@@ -219,6 +228,8 @@ system_flowlarge.add_variable("flowLargeVar", CONSTANT, MONOMIAL);
 
   system_flow.attach_assemble_function(assemble_flow);
   system_porous.attach_assemble_function(assemble_porous);
+
+  system_porous_p1p0.attach_assemble_function(assemble_porous_p1p0);
 }
 
 double PoroElastic::compute_ppen(double jphi_cur, double pnorm_cur)
@@ -2090,6 +2101,11 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
   solve_darcy(es);
   solve_mexp_system(es);
 
+  LinearImplicitSystem &system_porous =
+      es.get_system<LinearImplicitSystem>("porousp1p0System");
+
+  system_porous.solve();
+
   time_itr++;
 }
 
@@ -3494,5 +3510,354 @@ void PoroElastic::assemble_mexp(
 
     flow_system.matrix->add_matrix(Ke, dof_indices);
     flow_system.rhs->add_vector(Fe, dof_indices);
+  } // end of element loop
+}
+
+void PoroElastic::assemble_porous_p1p0(
+    EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
+{
+  // Get a constant reference to the mesh object.
+  const MeshBase &mesh = es.get_mesh();
+
+  // The dimension that we are running
+  const unsigned int dim = mesh.mesh_dimension();
+
+  // Get a reference to the Stokes system object.
+  LinearImplicitSystem &darcy_system =
+      es.get_system<LinearImplicitSystem>("porousp1p0System");
+  NonlinearImplicitSystem &displacement_system =
+      es.get_system<NonlinearImplicitSystem>("NonlinearElasticity");
+
+  System &pmono_system = es.add_system<System>("pMonoSystem");
+  const DofMap &dof_map_pmono = pmono_system.get_dof_map();
+  std::vector<dof_id_type> dof_indices_pmono;
+
+  unsigned int u_var, v_var, w_var, m_var;
+
+  // Numeric ids corresponding to each variable in the system
+  u_var = darcy_system.variable_number("wxp1p0Var");
+  v_var = darcy_system.variable_number("wyp1p0Var");
+#if (MESH_DIMENSION == 3)
+  w_var = darcy_system.variable_number("wzp1p0Var");
+#endif
+  m_var = darcy_system.variable_number("mp1p0Var");
+
+  // Get the Finite Element type for "u".  Note this will be
+  // the same as the type for "v".
+  FEType fe_vel_type = darcy_system.variable_type(u_var);
+  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
+  QGauss qrule(dim, fe_vel_type.default_quadrature_order());
+  fe_vel->attach_quadrature_rule(&qrule);
+  UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
+  QGauss qface(dim - 1,
+               fe_vel_type.default_quadrature_order());
+
+  fe_face->attach_quadrature_rule(&qface);
+
+  FEType fe_m_type = darcy_system.variable_type(m_var);
+  UniquePtr<FEBase> fe_m(FEBase::build(dim, fe_m_type));
+  QGauss qrule_m(dim, fe_m_type.default_quadrature_order());
+  fe_m->attach_quadrature_rule(&qrule_m);
+  UniquePtr<FEBase> fe_face_m(FEBase::build(dim, fe_m_type));
+  QGauss qface_m(dim - 1,
+                 fe_vel_type.default_quadrature_order());
+
+  fe_face_m->attach_quadrature_rule(&qface_m);
+
+  const std::vector<double> &JxW = fe_vel->get_JxW();
+  const std::vector<std::vector<double>> &phi = fe_vel->get_phi();
+  const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
+
+  const std::vector<std::vector<double>> &phi_m = fe_m->get_phi();
+  const std::vector<std::vector<RealGradient>> &dphi_m = fe_m->get_dphi();
+
+  const DofMap &dof_map = darcy_system.get_dof_map();
+  const DofMap &dof_map_dis = displacement_system.get_dof_map();
+
+  // Define data structures to contain the element matrix
+  // and right-hand-side vector contribution.  Following
+  // basic finite element terminology we will denote these
+  // "Ke" and "Fe".
+  DenseMatrix<double> Ke;
+  DenseVector<double> Fe;
+
+#if (MESH_DIMENSION == 2)
+  DenseSubMatrix<double> Kuu(Ke), Kuv(Ke), Kum(Ke), Kvu(Ke), Kvv(Ke), Kvm(Ke),
+      Kmu(Ke), Kmv(Ke), Kmm(Ke);
+
+  DenseSubVector<double> Fu(Fe), Fv(Fe), Fm(Fe);
+#elif (MESH_DIMENSION == 3)
+  DenseSubMatrix<double> Kuu(Ke), Kuv(Ke), Kuw(Ke), Kum(Ke), Kvu(Ke), Kvv(Ke),
+      Kvw(Ke), Kvm(Ke), Kwu(Ke), Kwv(Ke), Kww(Ke), Kwm(Ke), Kmu(Ke), Kmv(Ke),
+      Kmw(Ke), Kmm(Ke);
+
+  DenseSubVector<double> Fu(Fe), Fv(Fe), Fw(Fe), Fm(Fe);
+#endif
+
+  // This vector will hold the degree of freedom indices for
+  // the element.  These define where in the global system
+  // the element degrees of freedom get mapped.
+  std::vector<dof_id_type> dof_indices;
+  std::vector<std::vector<dof_id_type>> dof_indices_uvw(dim + 1);
+
+  std::vector<std::vector<dof_id_type>> dof_indices_dis(dim + 1);
+
+  std::vector<dof_id_type> dof_indices_stress;
+  std::vector<dof_id_type> dof_indices_ppore;
+
+  // Now we will loop over all the elements in the mesh that
+  // live on the local processor. We will compute the element
+  // matrix and right-hand-side contribution.  Since the mesh
+  // will be refined we want to only consider the ACTIVE elements,
+  // hence we use a variant of the active_elem_iterator.
+  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+  const MeshBase::const_element_iterator end_el =
+      mesh.active_local_elements_end();
+
+  for (; el != end_el; ++el)
+  {
+    // Store a pointer to the element we are currently
+    // working on.  This allows for nicer syntax later.
+    const Elem *elem = *el;
+
+    // Get the degree of freedom indices for the
+    // current element.  These define where in the global
+    // matrix and right-hand-side this element will
+    // contribute to.
+    dof_map.dof_indices(elem, dof_indices);
+
+    for (unsigned int var = 0; var < dim + 1; var++)
+    {
+      dof_map.dof_indices(elem, dof_indices_uvw[var], var);
+      dof_map_dis.dof_indices(elem, dof_indices_dis[var], var);
+    }
+
+    dof_map_pmono.dof_indices(elem, dof_indices_pmono, 0);
+
+    unsigned int n_dofs, n_u_dofs, n_v_dofs, n_w_dofs, n_m_dofs;
+
+    n_dofs = dof_indices.size();
+    n_u_dofs = dof_indices_uvw[0].size();
+    n_v_dofs = dof_indices_uvw[1].size();
+#if (MESH_DIMENSION == 3)
+    n_w_dofs = dof_indices_uvw[2].size();
+#endif
+    n_m_dofs = dof_indices_uvw[dim].size();
+
+    fe_vel->reinit(elem);
+    fe_m->reinit(elem);
+
+    Ke.resize(n_dofs, n_dofs);
+    Fe.resize(n_dofs);
+
+    Kuu.reposition(u_var * n_u_dofs, u_var * n_u_dofs, n_u_dofs, n_u_dofs);
+    Kuv.reposition(u_var * n_u_dofs, v_var * n_u_dofs, n_u_dofs, n_v_dofs);
+#if (MESH_DIMENSION == 3)
+    Kuw.reposition(u_var * n_u_dofs, w_var * n_u_dofs, n_u_dofs, n_w_dofs);
+#endif
+    Kum.reposition(u_var * n_u_dofs, m_var * n_u_dofs, n_u_dofs, n_m_dofs);
+
+    Kvu.reposition(v_var * n_v_dofs, u_var * n_v_dofs, n_v_dofs, n_u_dofs);
+    Kvv.reposition(v_var * n_v_dofs, v_var * n_v_dofs, n_v_dofs, n_v_dofs);
+#if (MESH_DIMENSION == 3)
+    Kvw.reposition(v_var * n_v_dofs, w_var * n_v_dofs, n_v_dofs, n_w_dofs);
+#endif
+    Kvm.reposition(v_var * n_v_dofs, m_var * n_v_dofs, n_v_dofs, n_m_dofs);
+
+#if (MESH_DIMENSION == 3)
+    {
+      Kwu.reposition(w_var * n_u_dofs, u_var * n_u_dofs, n_w_dofs, n_u_dofs);
+      Kwv.reposition(w_var * n_u_dofs, v_var * n_u_dofs, n_w_dofs, n_v_dofs);
+      Kww.reposition(w_var * n_u_dofs, w_var * n_u_dofs, n_w_dofs, n_w_dofs);
+      Kwm.reposition(w_var * n_u_dofs, m_var * n_u_dofs, n_w_dofs, n_m_dofs);
+    }
+#endif
+
+    Kmu.reposition(m_var * n_u_dofs, u_var * n_u_dofs, n_m_dofs, n_u_dofs);
+    Kmv.reposition(m_var * n_u_dofs, v_var * n_u_dofs, n_m_dofs, n_v_dofs);
+#if (MESH_DIMENSION == 3)
+    Kmw.reposition(m_var * n_u_dofs, w_var * n_u_dofs, n_m_dofs, n_w_dofs);
+#endif
+    Kmm.reposition(m_var * n_u_dofs, m_var * n_u_dofs, n_m_dofs, n_m_dofs);
+
+    Fu.reposition(u_var * n_u_dofs, n_u_dofs);
+    Fv.reposition(v_var * n_u_dofs, n_v_dofs);
+#if (MESH_DIMENSION == 3)
+    Fw.reposition(w_var * n_u_dofs, n_w_dofs);
+#endif
+    Fm.reposition(m_var * n_u_dofs, n_m_dofs);
+
+    // Now we will build the element matrix and right-hand-side.
+    // Constructing the RHS requires the solution and its
+    // gradient from the previous timestep.  This must be
+    // calculated at each quadrature point by summing the
+    // solution degree-of-freedom values by the appropriate
+    // weight functions.
+    for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
+    {
+
+      GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
+
+      double m_old = 0.0, pmono_cur = 0.0;
+      m_old += darcy_system.current_solution(dof_indices_uvw[dim][0]);
+      pmono_cur += pmono_system.current_solution(dof_indices_pmono[0]);
+
+      DenseVector<double> KFinvTdelP(dim);
+      GeomPar::FInvTra.vector_mult(KFinvTdelP, GeomPar::grad_pre);
+      KFinvTdelP.scale(-permeability);
+
+      for (unsigned int dof_i = 0; dof_i < n_u_dofs; dof_i++)
+      {
+        DenseVector<double> gradNA;
+        gradNA.resize(MESH_DIMENSION);
+        for (unsigned int i = 0; i < dim; i++)
+        {
+          gradNA(i) = dphi[dof_i][qp](i);
+        }
+
+        Fu(dof_i) += permeability * pmono_cur * dphi[dof_i][qp](0) * JxW[qp];
+        Fv(dof_i) += permeability * pmono_cur * dphi[dof_i][qp](1) * JxW[qp];
+#if (MESH_DIMENSION == 3)
+        Fw(dof_i) += permeability * pmono_cur * dphi[dof_i][qp](2) * JxW[qp];
+#endif
+
+        Kum(dof_i, 0) += -permeability * kappa_0 * dphi[dof_i][qp](0) * JxW[qp];
+        Kvm(dof_i, 0) += -permeability * kappa_0 * dphi[dof_i][qp](1) * JxW[qp];
+#if (MESH_DIMENSION == 3)
+        {
+          Kwm(dof_i, 0) += -permeability * kappa_0 * dphi[dof_i][qp](2) * JxW[qp];
+        }
+#endif
+
+        // Matrix contributions for the uu and vv couplings.
+        for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
+        {
+
+          DenseVector<double> gradNB;
+          gradNB.resize(MESH_DIMENSION);
+          for (unsigned int i = 0; i < dim; i++)
+          {
+            gradNB(i) = dphi[dof_j][qp](i);
+          }
+
+          Kuu(dof_i, dof_j) += phi[dof_i][qp] * phi[dof_j][qp] * GeomPar::detF * JxW[qp];
+          Kvv(dof_i, dof_j) += phi[dof_i][qp] * phi[dof_j][qp] * GeomPar::detF * JxW[qp];
+#if (MESH_DIMENSION == 3)
+          Kww(dof_i, dof_j) +=
+              phi[dof_i][qp] * phi[dof_j][qp] * GeomPar::detF * JxW[qp];
+#endif
+
+          if (brinkman == 1)
+          {
+            Kuu(dof_i, dof_j) +=
+                viscocity * MatVecOper::contractVec(gradNB, gradNA) *
+                JxW[qp];
+            Kvv(dof_i, dof_j) +=
+                viscocity * MatVecOper::contractVec(gradNB, gradNA) *
+                JxW[qp];
+#if (MESH_DIMENSION == 3)
+            Kww(dof_i, dof_j) +=
+                viscocity * MatVecOper::contractVec(gradNB, gradNA) *
+                JxW[qp];
+#endif
+          }
+        }
+      }
+
+      Fm(0) += (m_old / dt) * JxW[qp];
+
+      Kmm(0, 0) += (1.0 / dt) * JxW[qp];
+
+      for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
+      {
+        Kmu(0, dof_j) += dphi[dof_j][qp](0) * JxW[qp];
+        Kmv(0, dof_j) += dphi[dof_j][qp](1) * JxW[qp];
+#if (MESH_DIMENSION == 3)
+        Kmw(0, dof_j) += dphi[dof_j][qp](2) * JxW[qp];
+#endif
+      }
+
+    } // end of the quadrature point qp-loop
+
+    for (unsigned int dof_i = 0; dof_i < 3; dof_i++)
+    {
+
+      System &bcid_system = es.get_system<System>("bcidSystem");
+      unsigned int bcid_var = bcid_system.variable_number("bcidVar");
+      const DofMap &dof_map_bcid = bcid_system.get_dof_map();
+      std::vector<dof_id_type> dof_indices_bcid;
+      dof_map_bcid.dof_indices(elem, dof_indices_bcid, bcid_var);
+
+      double boundary_cur = bcid_system.current_solution(dof_indices_bcid[dof_i]);
+
+      if (boundary_cur > 900.0)
+      {
+
+        if (brinkman == 0)
+        {
+          Point pj;
+          pj = elem->point(dof_i);
+
+          double Dis = sqrt(pow(pj(0), 2) + pow(pj(1), 2));
+          double sinTheta = (pj(1)) / Dis;
+          double cosTheta = (pj(0)) / Dis;
+
+
+          double Fu0, Fv0;
+
+          Fu0 = Fu(dof_i);
+          Fv0 = Fv(dof_i);
+
+          Fu(dof_i) = 0;
+          Fv(dof_i) = -Fu0 * sinTheta + Fv0 * cosTheta;
+
+          double Kuu0, Kuv0, Kum0, Kvu0, Kvv0, Kvm0;
+
+          for (unsigned int dof_j = 0; dof_j < 3; dof_j++)
+          {
+            Kuu0 = Kuu(dof_i, dof_j);
+            Kuv0 = Kuv(dof_i, dof_j);
+
+            Kvu0 = Kvu(dof_i, dof_j);
+            Kvv0 = Kvv(dof_i, dof_j);
+
+            Kvu(dof_i, dof_j) = -Kuu0 * sinTheta + Kvu0 * cosTheta;
+            Kvv(dof_i, dof_j) = -Kuv0 * sinTheta + Kvv0 * cosTheta;
+
+            Kuu(dof_i, dof_j) = 0.0;
+            Kuv(dof_i, dof_j) = 0.0;
+          }
+
+          Kum0 = Kum(dof_i, 0);
+          Kvm0 = Kvm(dof_i, 0);
+
+          Kvm(dof_i, 0) = -Kum0 * sinTheta + Kvm0 * cosTheta;
+
+          Kuu(dof_i, dof_i) = cosTheta;
+          Kuv(dof_i, dof_i) = sinTheta;
+          Kum(dof_i, 0) = 0.0;
+        }
+
+        else
+        {
+          Fu(dof_i) = 0.0;
+          Fv(dof_i) = 0.0;
+          for (unsigned int dof_j = 0; dof_j < 3; dof_j++)
+          {
+            Kuu(dof_i, dof_j) = 0.0;
+            Kuv(dof_i, dof_j) = 0.0;
+            Kvu(dof_i, dof_j) = 0.0;
+            Kvv(dof_i, dof_j) = 0.0;
+          }
+          Kum(dof_i, 0) = 0.0;
+          Kvm(dof_i, 0) = 0.0;
+          Kuu(dof_i, dof_i) = 1.0;
+          Kvv(dof_i, dof_i) = 1.0;
+        }
+      }
+    }
+
+    darcy_system.matrix->add_matrix(Ke, dof_indices);
+    darcy_system.rhs->add_vector(Fe, dof_indices);
   } // end of element loop
 }

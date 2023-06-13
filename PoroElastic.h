@@ -182,6 +182,8 @@ public:
                             const std::string &libmesh_dbg_var(system_name));
   static void assemble_porous(EquationSystems &es,
                               const std::string &libmesh_dbg_var(system_name));
+  static void assemble_porous_p1p0(EquationSystems &es,
+                                   const std::string &libmesh_dbg_var(system_name));
   static void initialise_K(EquationSystems &es);
   static void update_poroelastic(EquationSystems &es);
   static void initialise_poroelastic(EquationSystems &es);
