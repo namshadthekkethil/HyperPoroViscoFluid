@@ -30,6 +30,8 @@ double PoroElastic::coord_source[4][21990];
 DenseMatrix<double> PoroElastic::porous_data;
 DenseVector<vector<double>> PoroElastic::source_data;
 
+double PoroElastic::tau_vispe;
+
 vector<int> PoroElastic::near_vess;
 vector<double> PoroElastic::source_vess;
 
@@ -1555,9 +1557,9 @@ void PoroElastic::assemble_flow(
 
         Fm(dof_i) += source_cur * phi[dof_i][qp] * JxW[qp];
 
-        if (brinkman == 1)
-          Fm(dof_i) +=
-              MatVecOper::contractVec(JFinvmMuKdivJCinvdelW, gradNA) * JxW[qp];
+        // if (brinkman == 1)
+        //   Fm(dof_i) +=
+        //       MatVecOper::contractVec(JFinvmMuKdivJCinvdelW, gradNA) * JxW[qp];
 
         // Matrix contributions for the uu and vv couplings.
         for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
@@ -3546,7 +3548,11 @@ void PoroElastic::assemble_porous_p1p0(
   // the same as the type for "v".
   FEType fe_vel_type = darcy_system.variable_type(u_var);
   UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
-  QGauss qrule(dim, fe_vel_type.default_quadrature_order());
+
+
+  // QGauss qrule(dim, fe_vel_type.default_quadrature_order());
+  QGauss qrule(dim, CONSTANT);
+
   fe_vel->attach_quadrature_rule(&qrule);
   UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
   QGauss qface(dim - 1,
@@ -3687,6 +3693,8 @@ void PoroElastic::assemble_porous_p1p0(
 #endif
     Fm.reposition(m_var * n_u_dofs, n_m_dofs);
 
+    double pmono_el = pmono_system.current_solution(dof_indices_pmono[0]);
+
     // Now we will build the element matrix and right-hand-side.
     // Constructing the RHS requires the solution and its
     // gradient from the previous timestep.  This must be
@@ -3750,14 +3758,14 @@ void PoroElastic::assemble_porous_p1p0(
           if (brinkman == 1)
           {
             Kuu(dof_i, dof_j) +=
-                viscocity * MatVecOper::contractVec(gradNB, gradNA) *
+                tau_vispe * MatVecOper::contractVec(gradNB, gradNA) *
                 JxW[qp];
             Kvv(dof_i, dof_j) +=
-                viscocity * MatVecOper::contractVec(gradNB, gradNA) *
+                tau_vispe * MatVecOper::contractVec(gradNB, gradNA) *
                 JxW[qp];
 #if (MESH_DIMENSION == 3)
             Kww(dof_i, dof_j) +=
-                viscocity * MatVecOper::contractVec(gradNB, gradNA) *
+                tau_vispe * MatVecOper::contractVec(gradNB, gradNA) *
                 JxW[qp];
 #endif
           }
@@ -3778,6 +3786,81 @@ void PoroElastic::assemble_porous_p1p0(
       }
 
     } // end of the quadrature point qp-loop
+
+    for (unsigned int side = 0; side < elem->n_sides(); side++)
+      if (elem->neighbor_ptr(side) == libmesh_nullptr)
+      {
+
+        const std::vector<std::vector<Real>> &phi_face = fe_face->get_phi();
+        const std::vector<Real> &JxW_face = fe_face->get_JxW();
+
+        const std::vector<Point> &normal_face = fe_face->get_normals();
+        const std::vector<Point> &Xref = fe_face->get_xyz();
+
+        fe_face->reinit(elem, side);
+
+        for (unsigned int qp = 0; qp < qface.n_points(); qp++)
+        {
+          Point pj;
+          pj = Xref[qp];
+
+          double Dis = sqrt(pow(pj(0), 2) + pow(pj(1), 2));
+          double sinTheta = (pj(1)) / Dis;
+          double cosTheta = (pj(0)) / Dis;
+
+          vector<boundary_id_type> bc_id_vec;
+          mesh.boundary_info->boundary_ids(elem, side, bc_id_vec);
+          short int bc_id =
+              bc_id_vec[0]; // mesh.boundary_info->boundary_id(elem, side);
+
+          if (bc_id == 5) // This is the x=+ boundary
+          {
+            for (std::size_t i = 0; i < phi_face.size(); i++)
+            {
+              Fu(i) += -permeability * pmono_el * phi_face[i][qp] * JxW_face[qp];
+              Fv(i) += -permeability * pmono_el * phi_face[i][qp] * JxW_face[qp];
+              Kum(i, 0) += permeability * (kappa_0)*phi_face[i][qp] * JxW_face[qp];
+              Kvm(i, 0) += permeability * (kappa_0)*phi_face[i][qp] * JxW_face[qp];
+            }
+          }
+
+          if (brinkman == 1 && (bc_id == 1 || bc_id == 2 || bc_id == 3 || bc_id == 4 || bc_id == 5)) // This is the x=+ boundary
+          {
+            for (std::size_t i = 0; i < phi_face.size(); i++)
+            {
+              for (std::size_t j = 0; j < phi_face.size(); j++)
+              {
+                Kuu(i, 0) += 1.0e12 * phi_face[i][qp] * phi_face[j][qp] * JxW_face[qp];
+                Kvv(i, 0) += 1.0e12 * phi_face[i][qp] * phi_face[j][qp] * JxW_face[qp];
+              }
+            }
+          }
+
+          if (brinkman == 0)
+          {
+            if (bc_id == 1 || bc_id == 2)
+            {
+              for (std::size_t i = 0; i < phi_face.size(); i++)
+              {
+                for (std::size_t j = 0; j < phi_face.size(); j++)
+                {
+                  Kuu(i, 0) += 1.0e12 * phi_face[i][qp] * phi_face[j][qp] * JxW_face[qp];
+                }
+              }
+            }
+            if (bc_id == 3 || bc_id == 4)
+            {
+              for (std::size_t i = 0; i < phi_face.size(); i++)
+              {
+                for (std::size_t j = 0; j < phi_face.size(); j++)
+                {
+                  Kvv(i, 0) += 1.0e12 * phi_face[i][qp] * phi_face[j][qp] * JxW_face[qp];
+                }
+              }
+            }
+          }
+        }
+      }
 
     for (unsigned int dof_i = 0; dof_i < 3; dof_i++)
     {
@@ -3840,19 +3923,19 @@ void PoroElastic::assemble_porous_p1p0(
 
         else
         {
-          Fu(dof_i) = 0.0;
-          Fv(dof_i) = 0.0;
-          for (unsigned int dof_j = 0; dof_j < 3; dof_j++)
-          {
-            Kuu(dof_i, dof_j) = 0.0;
-            Kuv(dof_i, dof_j) = 0.0;
-            Kvu(dof_i, dof_j) = 0.0;
-            Kvv(dof_i, dof_j) = 0.0;
-          }
-          Kum(dof_i, 0) = 0.0;
-          Kvm(dof_i, 0) = 0.0;
-          Kuu(dof_i, dof_i) = 1.0;
-          Kvv(dof_i, dof_i) = 1.0;
+          // Fu(dof_i) = 0.0;
+          // Fv(dof_i) = 0.0;
+          // for (unsigned int dof_j = 0; dof_j < 3; dof_j++)
+          // {
+          //   Kuu(dof_i, dof_j) = 0.0;
+          //   Kuv(dof_i, dof_j) = 0.0;
+          //   Kvu(dof_i, dof_j) = 0.0;
+          //   Kvv(dof_i, dof_j) = 0.0;
+          // }
+          // Kum(dof_i, 0) = 0.0;
+          // Kvm(dof_i, 0) = 0.0;
+          // Kuu(dof_i, dof_i) = 1.0;
+          // Kvv(dof_i, dof_i) = 1.0;
         }
       }
     }

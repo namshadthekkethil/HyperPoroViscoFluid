@@ -1,7 +1,7 @@
 ######################################################################
 #
 # Template libMesh application Makefile
-LIBMESH_DIR ?= /work/e645/shared/sfw/linux/libmesh/1.6.2/1.6.2-opt
+LIBMESH_DIR ?= /work/e645/shared/sfw/etc/libmesh/
 
 
 # include the library options determined by configure

@@ -445,42 +445,54 @@ int main(int argc, char **argv)
   {
     InputParam::Vtaubya(0) = atof(argv[1]);
 
-    if(atoi(argv[2]) == 0)
-		InputParam::VabyD(0) = 1.0e-3;
-	else if(atoi(argv[2]) == 1)
-		InputParam::VabyD(0) = 2.0e-3;
-	else if(atoi(argv[2]) == 2)
-		InputParam::VabyD(0) = 5.0e-3;
-	else if(atoi(argv[2]) == 3)
-		InputParam::VabyD(0) = 1.0e-2;
-	else if(atoi(argv[2]) == 4)
-		InputParam::VabyD(0) = 2.0e-2;
-	else if(atoi(argv[2]) == 5)
-		InputParam::VabyD(0) = 5.0e-2;
-	else if(atoi(argv[2]) == 6)
-		InputParam::VabyD(0) = 1.0e-1;
-	else if(atoi(argv[2]) == 7)
-		InputParam::VabyD(0) = 2.0e-1;
-	else if(atoi(argv[2]) == 8)
-		InputParam::VabyD(0) = 5.0e-1;
-	else if(atoi(argv[2]) == 9)
-		InputParam::VabyD(0) = 1.0e0;
-	else if(atoi(argv[2]) == 10)
-		InputParam::VabyD(0) = 2.0e0;
-	else if(atoi(argv[2]) == 11)
-		InputParam::VabyD(0) = 5.0e0;
-	else if(atoi(argv[2]) == 12)
-		InputParam::VabyD(0) = 1.0e1;
-	else if(atoi(argv[2]) == 13)
-		InputParam::VabyD(0) = 2.0e1;
-	else if(atoi(argv[2]) == 14)
-		InputParam::VabyD(0) = 5.0e1;
-	else if(atoi(argv[2]) == 15)
-		InputParam::VabyD(0) = 1.0e2;
-	else if(atoi(argv[2]) == 16)
-		InputParam::VabyD(0) = 2.0e2;
-	else if(atoi(argv[2]) == 17)
-		InputParam::VabyD(0) = 5.0e2;
+    if (atoi(argv[2]) == 0)
+      InputParam::VabyD(0) = 1.0e-4;
+    else if (atoi(argv[2]) == 1)
+      InputParam::VabyD(0) = 2.0e-4;
+    else if (atoi(argv[2]) == 2)
+      InputParam::VabyD(0) = 5.0e-4;
+    else if (atoi(argv[2]) == 3)
+      InputParam::VabyD(0) = 1.0e-3;
+    else if (atoi(argv[2]) == 4)
+      InputParam::VabyD(0) = 2.0e-3;
+    else if (atoi(argv[2]) == 5)
+      InputParam::VabyD(0) = 5.0e-3;
+    else if (atoi(argv[2]) == 6)
+      InputParam::VabyD(0) = 1.0e-2;
+    else if (atoi(argv[2]) == 7)
+      InputParam::VabyD(0) = 2.0e-2;
+    else if (atoi(argv[2]) == 8)
+      InputParam::VabyD(0) = 5.0e-2;
+    else if (atoi(argv[2]) == 9)
+      InputParam::VabyD(0) = 1.0e-1;
+    else if (atoi(argv[2]) == 10)
+      InputParam::VabyD(0) = 2.0e-1;
+    else if (atoi(argv[2]) == 11)
+      InputParam::VabyD(0) = 5.0e-1;
+    else if (atoi(argv[2]) == 12)
+      InputParam::VabyD(0) = 1.0e0;
+    else if (atoi(argv[2]) == 13)
+      InputParam::VabyD(0) = 2.0e0;
+    else if (atoi(argv[2]) == 14)
+      InputParam::VabyD(0) = 5.0e0;
+    else if (atoi(argv[2]) == 15)
+      InputParam::VabyD(0) = 1.0e1;
+    else if (atoi(argv[2]) == 16)
+      InputParam::VabyD(0) = 2.0e1;
+    else if (atoi(argv[2]) == 17)
+      InputParam::VabyD(0) = 5.0e1;
+    else if (atoi(argv[2]) == 18)
+      InputParam::VabyD(0) = 1.0e2;
+    else if (atoi(argv[2]) == 19)
+      InputParam::VabyD(0) = 2.0e2;
+    else if (atoi(argv[2]) == 20)
+      InputParam::VabyD(0) = 5.0e2;
+    else if (atoi(argv[2]) == 21)
+      InputParam::VabyD(0) = 1.0e3;
+    else if (atoi(argv[2]) == 22)
+      InputParam::VabyD(0) = 2.0e3;
+    else if (atoi(argv[2]) == 23)
+      InputParam::VabyD(0) = 5.0e3;
   }
 
 
@@ -506,6 +518,8 @@ int main(int argc, char **argv)
         InputParam::tau_visela = InputParam::Vtaubya(ii);
         InputParam::permeability = 1.0/(InputParam::G*InputParam::VabyD(jj));
         InputParam::mesh_scale = InputParam::a_bead / 0.5;
+
+        PoroElastic::tau_vispe = InputParam::viscocity*InputParam::permeability;
 
         if (InputParam::torsion_type == 4)
         {

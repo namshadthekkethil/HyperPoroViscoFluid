@@ -130,6 +130,7 @@ public:
   static int read_source,read_tree,read_permeability;
   static vector<int> near_vess;
   static vector<double> source_vess;
+  static double tau_vispe;
 
 
   static void read_input(int rank);
