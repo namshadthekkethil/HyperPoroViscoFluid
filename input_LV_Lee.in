@@ -96,6 +96,8 @@ bfs = 1.0 //4.0 //1.0
 vtaubya = '1.0e2'
 vabyd = '1.0e-1'
 
+
+
 strain_model = 1 //2
 
 pmat_type = 1
