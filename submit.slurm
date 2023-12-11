@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=1
 
 # Replace [budget code] below with your budget code (e.g. t01)
-#SBATCH --account=e642            
+#SBATCH --account=e645            
 #SBATCH --partition=standard
 #SBATCH --qos=standard
 
