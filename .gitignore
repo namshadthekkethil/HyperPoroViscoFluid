@@ -1,2 +1,5 @@
 core
 .vscode/settings.json
+*.o
+*.e
+example-opt
