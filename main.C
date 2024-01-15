@@ -43,7 +43,7 @@
 // In this example we only consider a body load (e.g. gravity), hence we set g =
 // 0.
 
-//check update on pull
+// check update on pull
 
 // C++ include files that we need
 #include <algorithm>
@@ -125,19 +125,18 @@ double mesh_jacobian(EquationSystems &es)
   return (tau_system.solution->sum()) / (tau_system.solution->size());
 }
 
-
 void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
-                   LibMeshInit &init, int count_solid)
+                         LibMeshInit &init, int count_solid)
 {
-  int dt_ratio = round(InputParam::dt/VesselFlow::dt);
+  int dt_ratio = round(InputParam::dt / VesselFlow::dt);
   int count_per = 0;
 
-  int count = VesselFlow::time_itr+1;
-  double start_time = count*VesselFlow::dt;
-  double end_time = InputParam::time_itr*InputParam::dt;
+  int count = VesselFlow::time_itr + 1;
+  double start_time = count * VesselFlow::dt;
+  double end_time = InputParam::time_itr * InputParam::dt;
 
-  //for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
-  for (double t_itr=start_time; t_itr <= end_time; t_itr=t_itr+VesselFlow::dt)
+  // for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
+  for (double t_itr = start_time; t_itr <= end_time; t_itr = t_itr + VesselFlow::dt)
   {
     VesselFlow::time_itr = count;
     VesselFlow::ttime = count * VesselFlow::dt_v;
@@ -195,9 +194,6 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 
     count++;
   }
-
-  
-
 }
 
 void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems &es_fluid, Mesh &mesh,
@@ -226,7 +222,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
   fileend = ".dat";
   string out_results = name_results + numstr_vtaubya + file_underscore + numstr_vabyd + fileend;
 
-  double m_total=0.0,J_total=0.0;
+  double m_total = 0.0, J_total = 0.0;
 
   ofstream file_result;
   file_result.open(out_results, ios::out);
@@ -245,32 +241,31 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
   PoroElastic::time_itr = 0;
 
-
-  #if (FLUIDFLOW == 1)
+#if (FLUIDFLOW == 1)
   VesselFlow::time_itr = 0;
   VesselFlow::writeFlowDataTime(es_fluid, 0, rank);
   VesselFlow::ttime = 0.0;
   VesselFlow::ttime_dim = 0.0;
   VesselFlow::update_qartvein(rank);
-  #endif
+#endif
 
   int count_per = 0;
 
   for (unsigned int count = 1; count < InputParam::n_total; count++)
   {
     InputParam::time_itr = count;
-    #if(FLUIDFLOW == 1)
+#if (FLUIDFLOW == 1)
     HyperElasticModel::compute_pext(es);
     VesselFlow::update_pext(es);
 
-    run_time_step_fluid(es_fluid, mesh_fluid, rank, init,count);
-    #endif
+    run_time_step_fluid(es_fluid, mesh_fluid, rank, init, count);
+#endif
 
     if (InputParam::torsion_type == 4)
       count_per = count;
     else
       count_per = fmod(count, InputParam::n_solves);
-    InputParam::ttime = count_per*InputParam::dt;
+    InputParam::ttime = count_per * InputParam::dt;
 
     BoundaryCond::compute_pressure();
     if (InputParam::torsion_type == 4 || InputParam::torsion_type == 5)
@@ -292,13 +287,12 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
     if (InputParam::porous == 1)
     {
-      if(FLUIDFLOW == 1)
+      if (FLUIDFLOW == 1)
       {
         PoroElastic::update_source_vessel(es_fluid);
-        PoroElastic::update_source(es,es_fluid);
+        PoroElastic::update_source(es, es_fluid);
 
-        //PoroElastic::update_flowlarge(es,es_fluid);
-
+        // PoroElastic::update_flowlarge(es,es_fluid);
       }
       PoroElastic::update_poroelastic(es);
     }
@@ -310,13 +304,13 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
     HyperElasticModel::update_hyperelastic_model(es);
 
-    if ((count ) % 50 == 0 || InputParam::trans_soln == 0)
+    if ((count) % 50 == 0 || InputParam::trans_soln == 0)
     {
       lde.compute_stresses();
       lde.compute_J();
       lde.compute_pmono();
 
-      //HyperElasticModel::compute_pext(es);
+      // HyperElasticModel::compute_pext(es);
 
       HyperElasticModel::update_total_velocity_displacement(es);
       HyperElasticModel::compute_Jtot(es);
@@ -327,13 +321,30 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
     file_result.open(out_results, ios::app);
     PostProcess::compute_skeleton_volume(es, es_cur, J_total, m_total);
-    file_result<<InputParam::time_itr*InputParam::dt<<" "<<J_total<<" "<<m_total<<endl;
+    file_result << InputParam::time_itr * InputParam::dt << " " << J_total << " " << m_total << endl;
     file_result.close();
   }
 
-  #if(FLUIDFLOW == 1)
+#if (FLUIDFLOW == 1)
   VesselFlow::write_restart_data(es_fluid, VesselFlow::time_itr, rank);
-  #endif
+#endif
+}
+
+void define_all_systems(Mesh &mesh, Mesh &mesh_cur, EquationSystems &es, EquationSystems &es_cur,
+                        int rank, LargeDeformationElasticity &lde)
+{
+  InputParam::read_mesh(mesh);
+  InputParam::read_mesh(mesh_cur);
+  mesh.print_info();
+
+  HyperElasticModel::initialise_lde(es, lde);
+  HyperElasticModel::define_systems(es);
+
+  if (InputParam::porous == 1)
+    PoroElastic::define_systems(es, rank);
+
+  es.init();
+  es_cur.init();
 }
 
 void solve_systems(LibMeshInit &init, int rank, int np)
@@ -358,10 +369,6 @@ void solve_systems(LibMeshInit &init, int rank, int np)
   VesselFlow::update_nearest_elem_term();
 #endif
 
-  InputParam::read_mesh(mesh);
-  InputParam::read_mesh(mesh_cur);
-  mesh.print_info();
-
   EquationSystems equation_systems(mesh);
   EquationSystems equation_systems_cur(mesh_cur);
   EquationSystems equation_systems_fluid(mesh_fluid);
@@ -374,27 +381,18 @@ void solve_systems(LibMeshInit &init, int rank, int np)
       equation_systems, equation_systems_cur, InputParam::ttime, InputParam::dt,
       HyperElasticModel::Resid, HyperElasticModel::Jacob);
 
+  define_all_systems(mesh, mesh_cur, equation_systems, equation_systems_cur, rank, lde);
+
   cout << "EVERYTHING IS FINE EVERYTHING IS FINE EVERYTHING IS FINE" << endl;
-  HyperElasticModel::initialise_lde(equation_systems, lde);
-
-  HyperElasticModel::define_systems(equation_systems);
-
-  if (InputParam::porous == 1)
-    PoroElastic::define_systems(equation_systems, rank);
-
-  equation_systems.init();
-  equation_systems_cur.init();
 
 #if (FLUIDFLOW == 1)
   equation_systems_fluid.init();
 #endif
 
-HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
+  HyperElasticModel::init_hyperelastic_model(equation_systems, rank);
   if (InputParam::porous == 1)
     PoroElastic::initialise_poroelastic(equation_systems);
   lde.pre_solve();
-
-  
 
 #if (FLUIDFLOW == 1)
   equation_systems_fluid.parameters.set<unsigned int>(
@@ -408,16 +406,14 @@ HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
                MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 #endif
 
-  if(InputParam::porous == 1 && FLUIDFLOW == 1)
+  if (InputParam::porous == 1 && FLUIDFLOW == 1)
   {
     PoroElastic::update_nearest_vessel();
     PoroElastic::update_aha(equation_systems);
   }
 
-  
-
-  run_time_step(equation_systems, equation_systems_cur, equation_systems_fluid, 
-              mesh, mesh_cur, mesh_fluid, lde, rank,init);
+  run_time_step(equation_systems, equation_systems_cur, equation_systems_fluid,
+                mesh, mesh_cur, mesh_fluid, lde, rank, init);
 
   if (InputParam::output_terminal == 0)
     fclose(stdout);
@@ -443,8 +439,7 @@ int main(int argc, char **argv)
 
   InputParam::read_input();
 
-
-  if(InputParam::var_v_a == 2)
+  if (InputParam::var_v_a == 2)
   {
     InputParam::Vtaubya(0) = atof(argv[1]);
 
@@ -498,7 +493,6 @@ int main(int argc, char **argv)
       InputParam::VabyD(0) = 5.0e3;
   }
 
-
   PostProcess::init_postprocess(rank);
 
   cout << "Initialise postprocess" << endl;
@@ -511,18 +505,18 @@ int main(int argc, char **argv)
     {
       for (int jj = 0; jj < InputParam::vabyd_size; jj++)
       {
-        //InputParam::V_bead =
-            //sqrt(InputParam::Vtaubya(ii) * InputParam::VabyD(jj) *
-                 //((InputParam::permeability * InputParam::G) /
-                  //InputParam::tau_visela));
-        //InputParam::a_bead = (InputParam::V_bead * InputParam::tau_visela) /
-                             //InputParam::Vtaubya(ii);
-                             
+        // InputParam::V_bead =
+        // sqrt(InputParam::Vtaubya(ii) * InputParam::VabyD(jj) *
+        //((InputParam::permeability * InputParam::G) /
+        // InputParam::tau_visela));
+        // InputParam::a_bead = (InputParam::V_bead * InputParam::tau_visela) /
+        // InputParam::Vtaubya(ii);
+
         InputParam::tau_visela = InputParam::Vtaubya(ii);
-        InputParam::permeability = 1.0/(InputParam::G*InputParam::VabyD(jj));
+        InputParam::permeability = 1.0 / (InputParam::G * InputParam::VabyD(jj));
         InputParam::mesh_scale = InputParam::a_bead / 0.5;
 
-        PoroElastic::tau_vispe = InputParam::viscocity*InputParam::permeability;
+        PoroElastic::tau_vispe = InputParam::viscocity * InputParam::permeability;
 
         if (InputParam::torsion_type == 4)
         {
@@ -536,10 +530,10 @@ int main(int argc, char **argv)
           InputParam::dt = ((2.0 * M_PI) / InputParam::omega) / InputParam::n_solves;
         }
 
-          cout << "V_bead=" << InputParam::V_bead
-               << " InputParam::a_bead=" << InputParam::a_bead
-               << " dt=" << InputParam::dt
-               << " mesh_scale=" << InputParam::mesh_scale << endl;
+        cout << "V_bead=" << InputParam::V_bead
+             << " InputParam::a_bead=" << InputParam::a_bead
+             << " dt=" << InputParam::dt
+             << " mesh_scale=" << InputParam::mesh_scale << endl;
 
         PostProcess::fp_time.resize(0);
         PostProcess::fppore_time.resize(0);
@@ -558,8 +552,6 @@ int main(int argc, char **argv)
     }
     PostProcess::write_final(rank);
   }
-  
-
 
   else
   {
