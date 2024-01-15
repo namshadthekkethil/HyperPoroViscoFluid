@@ -83,9 +83,6 @@ void PostProcess::compute_skeleton_volume(EquationSystems &es,
 
   const MeshBase &mesh_cur = es_cur.get_mesh();
 
-  System &m_system = es.get_system<System>("mMonoSystem");
-  NumericVector<double> &m_vec = *m_system.solution;
-  int m_system_num = m_system.number();
 
   MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
   const MeshBase::const_element_iterator end_el =
@@ -109,9 +106,13 @@ void PostProcess::compute_skeleton_volume(EquationSystems &es,
     elem_vol += elem->volume();
     elem_cur_vol += elem_cur->volume();
 
-    const int dof_index = elem->dof_number(m_system.number(), 0, 0);
-
-    m_sum += m_vec(dof_index) * elem->volume();
+    if (InputParam::porous == 1)
+    {
+      System &m_system = es.get_system<System>("mMonoSystem");
+      const int dof_index = elem->dof_number(m_system.number(), 0, 0);
+      NumericVector<double> &m_vec = *m_system.solution;
+      m_sum += m_vec(dof_index) * elem->volume();
+    }
 
     ++el_cur;
   }

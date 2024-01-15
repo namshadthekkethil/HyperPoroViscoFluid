@@ -260,6 +260,7 @@ void HyperElasticModel::initialize_material_axes(EquationSystems &es, int rank)
   f0_vec.localize(*f0_system.current_local_solution);
   s0_vec.localize(*s0_system.current_local_solution);
 
+
   return;
 }
 

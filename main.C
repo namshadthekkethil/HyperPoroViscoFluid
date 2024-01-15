@@ -394,6 +394,8 @@ HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
     PoroElastic::initialise_poroelastic(equation_systems);
   lde.pre_solve();
 
+  
+
 #if (FLUIDFLOW == 1)
   equation_systems_fluid.parameters.set<unsigned int>(
       "nonlinear solver maximum iterations") = 100;
@@ -413,6 +415,7 @@ HyperElasticModel::init_hyperelastic_model(equation_systems,rank);
   }
 
   
+
   run_time_step(equation_systems, equation_systems_cur, equation_systems_fluid, 
               mesh, mesh_cur, mesh_fluid, lde, rank,init);
 
