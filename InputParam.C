@@ -4,14 +4,14 @@ using namespace libMesh;
 using namespace std;
 
 double InputParam::mesh_scale;
-std::string InputParam::mesh_file_name, InputParam::fibre_file_name,
+std::string InputParam::mesh_file_name, InputParam::fibre_file_name, InputParam::perm_file_name,
     InputParam::sheet_file_name;
 unsigned int InputParam::mesh_centre;
 unsigned int InputParam::n_solves,InputParam::n_total;
 unsigned int InputParam::output_terminal;
 double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
 int InputParam::time_itr;
-int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman;
+int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::aniso_perm;
 
 double InputParam::nonlinear_abs_tol, InputParam::nonlinear_rel_tol;
 unsigned int InputParam::nonlinear_max_its;
@@ -95,6 +95,8 @@ void InputParam::read_input() {
   n_solves = infile("n_solves", 10);
   dt = infile("dt", 0.01);
 
+  aniso_perm = infile("aniso_perm", 0);
+  perm_file_name = infile("perm_file_name", "frame_perm.e");
 
   time_per = infile("time_per", 0.8);
 
@@ -269,6 +271,35 @@ void InputParam::read_mesh(Mesh &mesh) {
 
   if (mesh_centre == 1) {
     //MeshTools::BoundingBox bbox = MeshTools::bounding_box(mesh);
+
+    BoundingBox bbox = MeshTools::create_bounding_box(mesh);
+
+    libMesh::Point lower = bbox.min();
+    libMesh::Point upper = bbox.max();
+    libMesh::out << "         mesh bounding box lower = (" << lower(0) << " , "
+                 << lower(1) << " , " << lower(2) << ") cm\n"
+                 << "         mesh bounding box upper = (" << upper(0) << " , "
+                 << upper(1) << " , " << upper(2) << ") cm\n";
+    MeshTools::Modification::translate(mesh, -0.5 * (upper(0) + lower(0)),
+                                       -0.5 * (upper(1) + lower(1)),
+                                       -0.5 * (upper(2) + lower(2)));
+  }
+}
+
+void InputParam::read_mesh_perm(ExodusII_IO & exo_io, Mesh &mesh)
+{
+  mesh.allow_renumbering(false);
+
+  if (mesh.processor_id() == 0)
+    exo_io.read(perm_file_name);
+  MeshCommunication().broadcast(mesh);
+  mesh.prepare_for_use();
+
+  MeshTools::Modification::scale(mesh, mesh_scale);
+
+  if (mesh_centre == 1)
+  {
+    // MeshTools::BoundingBox bbox = MeshTools::bounding_box(mesh);
 
     BoundingBox bbox = MeshTools::create_bounding_box(mesh);
 

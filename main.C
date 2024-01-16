@@ -86,6 +86,8 @@
 
 #include "libmesh/mesh_tetgen_interface.h"
 
+#include "libmesh/mesh_communication.h"
+
 #include "../../source_codes/FEMLDE_7/LargeDeformationElasticity.h"
 
 #include "../../source_codes/FEMLDE_7/GeomPar.h"
@@ -333,18 +335,40 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 void define_all_systems(Mesh &mesh, Mesh &mesh_cur, EquationSystems &es, EquationSystems &es_cur,
                         int rank, LargeDeformationElasticity &lde)
 {
-  InputParam::read_mesh(mesh);
-  InputParam::read_mesh(mesh_cur);
-  mesh.print_info();
+  if (InputParam::porous == 0 || InputParam::aniso_perm == 0)
+  {
+    InputParam::read_mesh(mesh);
+    InputParam::read_mesh(mesh_cur);
+    mesh.print_info();
 
-  HyperElasticModel::initialise_lde(es, lde);
-  HyperElasticModel::define_systems(es);
+    HyperElasticModel::initialise_lde(es, lde);
+    HyperElasticModel::define_systems(es);
 
-  if (InputParam::porous == 1)
+    if (InputParam::porous == 1)
+      PoroElastic::define_systems(es, rank);
+
+    es.init();
+    es_cur.init();
+  }
+
+  else
+  {
+    ExodusII_IO exo_io(mesh, NULL);
+    InputParam::read_mesh_perm(exo_io,mesh);
+    ExodusII_IO exo_io_cur(mesh_cur, NULL);
+    InputParam::read_mesh_perm(exo_io_cur, mesh_cur);
+    mesh.print_info();
+
+    HyperElasticModel::initialise_lde(es, lde);
+    HyperElasticModel::define_systems(es);
+
     PoroElastic::define_systems(es, rank);
+    es.init();
+    es_cur.init();
 
-  es.init();
-  es_cur.init();
+    PoroElastic::read_perm_data(es, exo_io);
+
+  }
 }
 
 void solve_systems(LibMeshInit &init, int rank, int np)

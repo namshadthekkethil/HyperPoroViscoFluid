@@ -232,7 +232,74 @@ if (brinkman == 1)
   system_porous.attach_assemble_function(assemble_porous);
 
   system_porous_p1p0.attach_assemble_function(assemble_porous_p1p0);
+
+  if(InputParam::aniso_perm == 1)
+  {
+    define_heir_systems(es);
+  }
 }
+
+void PoroElastic::define_heir_systems(EquationSystems &es)
+{
+  LinearImplicitSystem &zone_system =
+      es.add_system<LinearImplicitSystem>("zoneSystem");
+  zone_system.add_variable("zoneVar", CONSTANT, MONOMIAL);
+  zone_system.add_variable("zone2Var", CONSTANT, MONOMIAL);
+
+  LinearImplicitSystem &phi_system =
+      es.add_system<LinearImplicitSystem>("phiSystem");
+  phi_system.add_variable("phiVar", CONSTANT, MONOMIAL);
+  phi_system.add_variable("phi2Var", CONSTANT, MONOMIAL);
+
+  LinearImplicitSystem &perm_system =
+      es.add_system<LinearImplicitSystem>("permSystem");
+  perm_system.add_variable("K00Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K01Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K02Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K10Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K11Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K12Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K20Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K21Var", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K22Var", CONSTANT, MONOMIAL);
+
+  perm_system.add_variable("K00Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K01Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K02Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K10Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K11Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K12Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K20Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K21Var2", CONSTANT, MONOMIAL);
+  perm_system.add_variable("K22Var2", CONSTANT, MONOMIAL);
+}
+
+
+
+void PoroElastic::read_perm_data(EquationSystems & es, ExodusII_IO & exo_io)
+{
+  System &zone_system = es.get_system<System>("zoneSystem");
+  System &phi_system = es.get_system<System>("phiSystem");
+  System &perm_system = es.get_system<System>("permSystem");
+
+  exo_io.copy_elemental_solution(zone_system, "zoneVar", "zoneModVar");
+  exo_io.copy_elemental_solution(zone_system, "zone2Var", "zoneMod2Var");
+
+  exo_io.copy_elemental_solution(phi_system, "phiVar", "phiVar");
+  exo_io.copy_elemental_solution(phi_system, "phi2Var", "phi2Var");
+
+  exo_io.copy_elemental_solution(perm_system, "K00Var", "K00Var");
+  exo_io.copy_elemental_solution(perm_system, "K01Var", "K01Var");
+  exo_io.copy_elemental_solution(perm_system, "K02Var", "K02Var");
+  exo_io.copy_elemental_solution(perm_system, "K10Var", "K10Var");
+  exo_io.copy_elemental_solution(perm_system, "K11Var", "K11Var");
+  exo_io.copy_elemental_solution(perm_system, "K12Var", "K12Var");
+  exo_io.copy_elemental_solution(perm_system, "K20Var", "K20Var");
+  exo_io.copy_elemental_solution(perm_system, "K21Var", "K21Var");
+  exo_io.copy_elemental_solution(perm_system, "K22Var", "K22Var");
+}
+
+
 
 double PoroElastic::compute_ppen(double jphi_cur, double pnorm_cur)
 {

@@ -212,6 +212,8 @@ public:
   static void assemble_mexp(EquationSystems &es,
                             const std::string &libmesh_dbg_var(system_name));
   static void solve_mexp_system(EquationSystems &es);
+  static void define_heir_systems(EquationSystems &es);
+  static void read_perm_data(EquationSystems &es, ExodusII_IO &exo_io);
 };
 
 #endif

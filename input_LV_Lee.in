@@ -1,6 +1,7 @@
 mesh_file_name =  LVtrunk_heart_real_Lee_coupl.xda // LVtrunk_heart_exodusII_Lee_new.e // LVtrunk_heart_exodusII.e // LVtrunk_heart_exodusII_Lee_new.e // cell_2d_0_5_20.unv //cell_2d_2_5_5000.unv //../../../mesh_files/boys_cube_2d_0_5.unv
 fibre_file_name = fiberDir_Lee_coupl.txt // fiberDir_Lee_new.txt // fibreDir.txt //fibreDirBoyce.txt //fibreDir_Lee.txt //fibreDir.txt //fibreDir_benchmark.txt
 sheet_file_name = sheetDir_Lee_coupl.txt // fiberDir_Lee_new.txt //sheetDir.txt //sheetDir_Lee.txt
+perm_file_name = frame_perm.e
 mesh_scale = 0.1 // 1.0 //0.1
 mesh_centre = 1
 mesh_dim = 3 //2
@@ -20,7 +21,9 @@ incomp_type = 0 //1
 trans_soln = 1
 darcy_solver = 0
 
-porous = 0
+porous = 1
+
+aniso_perm = 1
 
 approx_order = FIRST
 fe_family = LAGRANGE

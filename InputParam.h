@@ -72,6 +72,7 @@
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/zero_function.h"
+#include "libmesh/mesh_communication.h"
 
 // The nonlinear solver and system we will be using
 #include "libmesh/linear_implicit_system.h"
@@ -102,14 +103,14 @@ public:
   ~InputParam();
 
   static double mesh_scale;
-  static std::string mesh_file_name, fibre_file_name, sheet_file_name;
+  static std::string mesh_file_name, fibre_file_name, sheet_file_name, perm_file_name;
   static unsigned int mesh_centre;
   static unsigned int n_solves,n_total;
   static unsigned int output_terminal;
   static double ttime, dt, time_per,omega;
   static int time_itr;
 
-  static int inertia, trans_soln;
+  static int inertia, trans_soln, aniso_perm;
 
   static int strain_model;
 
@@ -172,6 +173,7 @@ public:
 
   static void read_input();
   static void read_mesh(Mesh &mesh);
+  static void read_mesh_perm(ExodusII_IO &exo_io, Mesh &mesh);
 };
 
 #endif
