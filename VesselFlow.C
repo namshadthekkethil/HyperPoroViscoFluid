@@ -12,7 +12,7 @@ vector<Vess> VesselFlow::vessels, VesselFlow::vessels_in;
 vector<MeshData> VesselFlow::mesh_data;
 
 int VesselFlow::idx, VesselFlow::ide, VesselFlow::ivess, VesselFlow::vess_start,
-    VesselFlow::trans_soln, VesselFlow::restart, VesselFlow::restart_part_vein;
+    VesselFlow::trans_soln, VesselFlow::restart, VesselFlow::restart_part_vein, VesselFlow::fsi_flow;
 
 double VesselFlow::L_v, VesselFlow::mu_v, VesselFlow::nu_v, VesselFlow::rho_v,
     VesselFlow::alpha_v, VesselFlow::alpha_0, VesselFlow::beta_0,
@@ -65,6 +65,8 @@ void VesselFlow::read_input()
     // GetPot infile("input_1D_Lee_2008.in");
     GetPot infile("input_1D_Lee_LV.in");
 
+    fsi_flow = infile("fsi_flow", 1);
+
     trans_soln = infile("trans_soln", 1);
     time_integ = infile("time_integ", 2);
     inlet_bc = infile("inlet_bc", 0);
@@ -116,7 +118,8 @@ void VesselFlow::read_input()
 
     p_out = 0.0;
 
-    dt = time_per / N_period;
+    if(fsi_flow == 1)
+        dt = time_per / N_period;
 
     double t_c = sqrt(rho_v / p_0) * L_v;
     dt_v = dt / t_c;
@@ -723,8 +726,16 @@ void VesselFlow::define_systems(EquationSystems &es)
     flow_system_n1.add_variable("pn1Var", FIRST, LAGRANGE);
 
     auto &nl_solver = *flow_system.nonlinear_solver;
-    nl_solver.residual = compute_residual;
-    nl_solver.jacobian = compute_jacobian;
+    if (fsi_flow == 1)
+    {
+        nl_solver.residual = compute_residual;
+        nl_solver.jacobian = compute_jacobian;
+    }
+    if (fsi_flow == 0)
+    {
+        nl_solver.residual = compute_residual_steady;
+        nl_solver.jacobian = compute_jacobian_steady;
+    }
 
     // LinearImplicitSystem &flow_system =
     //     es.add_system<LinearImplicitSystem>("flowSystem");
@@ -2934,6 +2945,13 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                             (sqrt(A1) - sqrt(M_PI * vessels[n].r * vessels[n].r));
             double rad1 = sqrt(A1 / M_PI);
 
+            if (fsi_flow == 0)
+            {
+                rad1 = vessels[n].r;
+                p1 = A1_prime;
+                Q1 = Q1_prime;
+            }
+
             if (vessels_in[n].dl != -10)
             {
                 n++;
@@ -2963,6 +2981,13 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                         (vessels[n].beta / (M_PI * vessels[n].r * vessels[n].r)) *
                             (sqrt(A2) - sqrt(M_PI * vessels[n].r * vessels[n].r));
             double rad2 = sqrt(A2 / M_PI);
+
+            if (fsi_flow == 0)
+            {
+                rad2 = vessels[n].r;
+                p2 = A2_prime;
+                Q2 = Q2_prime;
+            }
 
             vess_x1 = 0.1 * vess_x1 - 0.5 * ((-3.1772) + (3.6581));
             vess_y1 = 0.1 * vess_y1 - 0.5 * ((-3.0591) + (3.2769));
@@ -3174,7 +3199,7 @@ void VesselFlow::compute_pext_term()
         }
         else if (pext_type == 10)
         {
-            pExtTerm[i] = pext_vec[nearElemTer[i]]*0.0001;
+            pExtTerm[i] = pext_vec[nearElemTer[i]] * 0.0001;
         }
     }
 }
@@ -3764,8 +3789,6 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
     ofstream file_source;
     ofstream file_aha;
 
-    
-
     if (rank == 0)
     {
         file_aha.open(file_name_aha, ios::app);
@@ -3797,8 +3820,6 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
                 flow_aha_cur[ahaTerm[i] - 1] += qvein_cur;
             }
 
-            
-
             // cout<<"i="<<i<<" aha="<<ahaTerm[i]<<endl;
         }
 
@@ -3806,7 +3827,7 @@ void VesselFlow::writeFlowDataBound(EquationSystems &es, int it, int rank)
 
         for (int i = 0; i < 16; i++)
         {
-            file_aha << " " << (flow_aha_cur[i]/ahaVolume[i])*60.0*0.001;
+            file_aha << " " << (flow_aha_cur[i] / ahaVolume[i]) * 60.0 * 0.001;
         }
         file_aha << endl;
 
@@ -4588,7 +4609,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
         Fu.reposition(u_var * n_u_dofs, n_u_dofs);
         Fp.reposition(p_var * n_u_dofs, n_p_dofs);
 
-        double r_const = pow(vessels[elem_id].r,4);
+        double r_const = pow(vessels[elem_id].r, 4);
 
         // Now we will build the element matrix.
         for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
@@ -4610,7 +4631,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
             for (unsigned int i = 0; i < n_u_dofs; i++)
             {
 
-                Fu(i) += -p_qp*r_const * dphi[i][qp](0) * JxW[qp];
+                Fu(i) += -p_qp * r_const * dphi[i][qp](0) * JxW[qp];
 
                 Fu(i) += Q_qp * phi[i][qp] * JxW[qp];
             }
@@ -4670,7 +4691,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
                     double p_left = 1.0;
                     double Q_left = system.current_solution(dof_indices_u[0]);
 
-                    Fu(0) += p_left*r_const * normal_face[0].operator()(0);
+                    Fu(0) += p_left * r_const * normal_face[0].operator()(0);
                     Fp(0) += Q_left * normal_face[0].operator()(0);
                 }
 
@@ -4679,7 +4700,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
                     double p_right = 0.0;
                     double Q_right = system.current_solution(dof_indices_u[1]);
 
-                    Fu(1) += p_right*r_const * normal_face[0].operator()(0);
+                    Fu(1) += p_right * r_const * normal_face[0].operator()(0);
                     Fp(1) += Q_right * normal_face[0].operator()(0);
                 }
                 //
@@ -4690,7 +4711,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
                     double Q_neigh2 = flow_vec[dof_indices_neighbor_2_u[0]];
                     double p_right = system.current_solution(dof_indices_p[1]);
 
-                    Fu(1) += p_right*r_const * normal_face[0].operator()(0);
+                    Fu(1) += p_right * r_const * normal_face[0].operator()(0);
                     Fp(1) += (Q_neigh1 + Q_neigh2) * normal_face[0].operator()(0);
                 }
 
@@ -4699,7 +4720,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
                     double Q_left = system.current_solution(dof_indices_u[0]);
                     double p_neigh = flow_vec[dof_indices_neighbor_p[1]];
 
-                    Fu(0) += p_neigh*r_const * normal_face[0].operator()(0);
+                    Fu(0) += p_neigh * r_const * normal_face[0].operator()(0);
                     Fp(0) += Q_left * normal_face[0].operator()(0);
                 }
             }
@@ -4941,7 +4962,7 @@ void VesselFlow::compute_jacobian_steady(const NumericVector<Number> &,
                     Kpun1(1, 0) += normal_face[0].operator()(0);
                     Kpun2(1, 0) += normal_face[0].operator()(0);
 
-                    Kup(1, 1) += r_const*normal_face[0].operator()(0);
+                    Kup(1, 1) += r_const * normal_face[0].operator()(0);
                 }
 
                 if (bc_id == 3000) // daughter boundary at junction

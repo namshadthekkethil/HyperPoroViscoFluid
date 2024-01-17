@@ -117,7 +117,7 @@ public:
   static Vess vess_i;
   static vector<MeshData> mesh_data;
   static vector<Vess> vessels, vessels_in;
-  static int idx, ide, ivess, vess_start, trans_soln,restart,restart_part_vein;
+  static int idx, ide, ivess, vess_start, trans_soln,restart,restart_part_vein, fsi_flow;
   static double L_v, mu_v, nu_v, rho_v, alpha_0, beta_0, alpha_v, gamma_v, p_0,
       p_out, c_v,p_in_const,p_out_const,p_ext_const;
   static double ttime, dt_v, dt,ttime_dim;

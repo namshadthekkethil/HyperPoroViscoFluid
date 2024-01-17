@@ -105,7 +105,7 @@
 #include "Admittance.h"
 #include "VesselFlow.h"
 
-#define FLUIDFLOW 0
+#define FLUIDFLOW 1
 
 using namespace libMesh;
 using namespace std;
@@ -180,7 +180,7 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 
     cout << "count=" << count << " count_per=" << count_per << " t=" << VesselFlow::ttime << " t_per=" << count_per * VesselFlow::dt_v << " tdim=" << count * VesselFlow::dt << " tdim_per=" << VesselFlow::ttime_dim << endl;
 
-    if (((count + 1) % 500 == 0))
+    if (((count + 1) % 5 == 0))
     {
       VesselFlow::writeFlowDataTime(es, count, rank);
     }
