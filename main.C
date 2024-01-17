@@ -160,8 +160,8 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
     if (VesselFlow::venous_flow == 1)
     {
       auto start = high_resolution_clock::now();
-
-      VesselFlow::update_partvein(es, rank);
+      if (VesselFlow::st_tree == 1)
+        VesselFlow::update_partvein(es, rank);
 
       auto stop = high_resolution_clock::now();
       auto duration = duration_cast<microseconds>(stop - start);
@@ -358,9 +358,11 @@ void define_all_systems(Mesh &mesh, Mesh &mesh_cur, EquationSystems &es, Equatio
     ExodusII_IO exo_io_cur(mesh_cur, NULL);
     InputParam::read_mesh_perm(exo_io_cur, mesh_cur);
     mesh.print_info();
+    
 
     HyperElasticModel::initialise_lde(es, lde);
     HyperElasticModel::define_systems(es);
+    
 
     PoroElastic::define_systems(es, rank);
     es.init();
@@ -392,6 +394,8 @@ void solve_systems(LibMeshInit &init, int rank, int np)
   VesselFlow::update_nearest_elem();
   VesselFlow::update_nearest_elem_term();
 #endif
+
+
 
   EquationSystems equation_systems(mesh);
   EquationSystems equation_systems_cur(mesh_cur);

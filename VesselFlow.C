@@ -118,7 +118,7 @@ void VesselFlow::read_input()
 
     p_out = 0.0;
 
-    if(fsi_flow == 1)
+    if (fsi_flow == 1)
         dt = time_per / N_period;
 
     double t_c = sqrt(rho_v / p_0) * L_v;
@@ -148,6 +148,11 @@ void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
                 file_tree >> vess_i.x1 >> vess_i.y1 >> vess_i.z1 >> vess_i.x2 >>
                     vess_i.y2 >> vess_i.z2 >> vess_i.l >> vess_i.r1 >> vess_i.r2 >>
                     vess_i.r >> vess_i.p >> vess_i.dl >> vess_i.dr >> vess_i.inside;
+                     //>> vess_i.nt >> vess_i.init >> vess_i.zeta;
+
+                     vess_i.nt = 0;
+                     vess_i.init=0;
+                     vess_i.zeta=0;
 
                 if (file_tree.eof())
                     break;
@@ -406,10 +411,13 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
          << " gamma=" << gamma_v << endl;
     create_mesh(mesh);
     // create_mesh_3(mesh);
-    // MeshTools::Generation::build_line(mesh, 1000, 0.0, 5.0, EDGE5);
+    
 
     initialise_partvein(rank, np, init);
+   
     updateImpedance();
+
+    
 
     string name = "flow_data_inlet";
     string fileend = ".dat";
@@ -601,9 +609,8 @@ void VesselFlow::create_mesh(Mesh &mesh)
 
 void VesselFlow::add_element_node(Mesh &mesh, int i)
 {
-
-    /*  cout << "i=" << i << " dl=" << vessels[i].dl << " dr=" << vessels[i].dr
-          << endl; */
+    /* This algorithm is only applicable if the vessels are numbered in a perticular format, i.e, starting with zero and then dl, dr.*/
+    //   cout << "i=" << i << " dl=" << vessels[i].dl << " dr=" << vessels[i].dr << endl;
     if (vessels[i].dl != -10)
     {
 

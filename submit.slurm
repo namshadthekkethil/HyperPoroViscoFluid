@@ -21,4 +21,4 @@ export OMP_NUM_THREADS=1
 #   Using 512 MPI processes and 128 MPI processes per node
 #   srun picks up the distribution from the sbatch options
 
-srun --distribution=block:block --hint=nomultithread ./main
+srun --distribution=block:block --hint=nomultithread ./example-opt
