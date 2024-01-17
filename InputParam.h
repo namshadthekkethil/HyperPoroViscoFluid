@@ -103,7 +103,7 @@ public:
   ~InputParam();
 
   static double mesh_scale;
-  static std::string mesh_file_name, fibre_file_name, sheet_file_name, perm_file_name;
+  static std::string mesh_file_name, fibre_file_name, sheet_file_name, perm_file_name, zone_file_name, zone_file_name_2;
   static unsigned int mesh_centre;
   static unsigned int n_solves,n_total;
   static unsigned int output_terminal;
@@ -123,6 +123,9 @@ public:
   static double alpha_stab, rho_s;
 
   static double kappa_0;
+  static vector<int> zone_parent, zone_parent_2;
+  static vector<Point> zone_inlet, zone_inlet_2;
+  static vector<double> zone_volumes, zone_volumes_2;
 
   static boundary_id_type clamp_x_size, clamp_y_size;
   static DenseVector<boundary_id_type> clamp_x_bcs, clamp_y_bcs;
@@ -174,6 +177,7 @@ public:
   static void read_input();
   static void read_mesh(Mesh &mesh);
   static void read_mesh_perm(ExodusII_IO &exo_io, Mesh &mesh);
+  static void read_zone_data();
 };
 
 #endif

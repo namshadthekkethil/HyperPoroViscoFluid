@@ -2,6 +2,9 @@ mesh_file_name =  LVtrunk_heart_real_Lee_coupl.xda // LVtrunk_heart_exodusII_Lee
 fibre_file_name = fiberDir_Lee_coupl.txt // fiberDir_Lee_new.txt // fibreDir.txt //fibreDirBoyce.txt //fibreDir_Lee.txt //fibreDir.txt //fibreDir_benchmark.txt
 sheet_file_name = sheetDir_Lee_coupl.txt // fiberDir_Lee_new.txt //sheetDir.txt //sheetDir_Lee.txt
 perm_file_name = frame_perm.e
+zone_file_name = zone_data.dat
+zone_file_name_2 = zone_data_2.dat
+
 mesh_scale = 0.1 // 1.0 //0.1
 mesh_centre = 1
 mesh_dim = 3 //2
@@ -115,7 +118,7 @@ source_prssr = 2.7e4
 sink_const = 0.0 // 3.0e-6
 sink_prssr = 0.0 // 1.3e4
 biot_modulus = 2.18e6
-kappa_0 = 1.0e10 //0.1
+kappa_0 = 1.0 // 1.0e10 //0.1
 permeability = 1.0 // 2.0e-6
 
 q1 = 0.022e4

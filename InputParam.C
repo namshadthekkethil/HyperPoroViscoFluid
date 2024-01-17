@@ -5,7 +5,7 @@ using namespace std;
 
 double InputParam::mesh_scale;
 std::string InputParam::mesh_file_name, InputParam::fibre_file_name, InputParam::perm_file_name,
-    InputParam::sheet_file_name;
+    InputParam::sheet_file_name, InputParam::zone_file_name, InputParam::zone_file_name_2;
 unsigned int InputParam::mesh_centre;
 unsigned int InputParam::n_solves,InputParam::n_total;
 unsigned int InputParam::output_terminal;
@@ -29,7 +29,11 @@ double InputParam::kappa_0;
 
 double InputParam::viscocity;
 
-    boundary_id_type InputParam::clamp_x_size,
+vector<int> InputParam::zone_parent, InputParam::zone_parent_2;
+vector<Point> InputParam::zone_inlet, InputParam::zone_inlet_2;
+vector<double> InputParam::zone_volumes, InputParam::zone_volumes_2;
+
+boundary_id_type InputParam::clamp_x_size,
     InputParam::clamp_y_size;
 DenseVector<boundary_id_type> InputParam::clamp_x_bcs, InputParam::clamp_y_bcs;
 #if (MESH_DIMENSION == 3)
@@ -261,7 +265,79 @@ void InputParam::read_input() {
   brinkman = infile("brinkman", 0);
   viscocity = infile("viscocity", 0.001);
 
+  if(porous == 1 && aniso_perm == 1)
+  {
+    zone_file_name = infile("zone_file_name", "zone_data.dat");
+    zone_file_name_2 = infile("zone_file_name_2", "zone_data_2.dat");
+
+    read_zone_data();
+  }
+
   infile.print();
+}
+
+void InputParam::read_zone_data()
+{
+  ifstream file_zone;
+  file_zone.open(zone_file_name);
+
+  int zone_parent_cur = 0;
+  Point zone_inlet_cur;
+  double zone_volumes_cur = 0.0;
+  while (!file_zone.eof())
+  {
+    file_zone >> zone_parent_cur >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    if(MESH_DIMENSION == 3)
+      file_zone >> zone_inlet_cur(2);
+
+    file_zone >> zone_volumes_cur;
+
+    zone_inlet_cur *= mesh_scale;
+    zone_volumes_cur *= mesh_scale * mesh_scale * mesh_scale;
+
+    if (file_zone.eof()) break;
+
+    else
+    {
+      zone_parent.push_back(zone_parent_cur);
+      zone_inlet.push_back(zone_inlet_cur);
+      zone_volumes.push_back(zone_volumes_cur);
+    }
+  }
+
+  file_zone.close();
+
+  ifstream file_zone_2;
+  file_zone_2.open(zone_file_name_2);
+
+  while (!file_zone_2.eof())
+  {
+    file_zone_2 >> zone_parent_cur >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    if (MESH_DIMENSION == 3)
+      file_zone_2 >> zone_inlet_cur(2);
+    file_zone_2 >> zone_volumes_cur;
+
+    zone_inlet_cur *= mesh_scale;
+    zone_volumes_cur *= mesh_scale * mesh_scale * mesh_scale;
+
+    if (file_zone_2.eof())
+      break;
+
+    else
+    {
+      zone_parent_2.push_back(zone_parent_cur);
+      zone_inlet_2.push_back(zone_inlet_cur);
+      zone_volumes_2.push_back(zone_volumes_cur);
+    }
+  }
+
+  file_zone_2.close();
+
+  // for(int i=0;i<zone_parent.size();i++)
+  // {
+  //   cout<<zone_inlet[i]<<endl;
+  // }
+
 }
 
 void InputParam::read_mesh(Mesh &mesh) {

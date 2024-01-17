@@ -306,7 +306,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
     HyperElasticModel::update_hyperelastic_model(es);
 
-    if ((count) % 50 == 0 || InputParam::trans_soln == 0)
+    if ((count) % 5 == 0 || InputParam::trans_soln == 0)
     {
       lde.compute_stresses();
       lde.compute_J();
