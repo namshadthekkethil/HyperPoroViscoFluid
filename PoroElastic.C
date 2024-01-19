@@ -2176,7 +2176,6 @@ void PoroElastic::initialise_poroelastic(EquationSystems &es)
   else
     read_porous_data(es);
 
-  update_source_heir(es);
 }
 
 void PoroElastic::update_poroelastic(EquationSystems &es)
@@ -2197,7 +2196,6 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
 
   if (InputParam::aniso_perm == 1)
   {
-    update_source_heir(es);
     LinearImplicitSystem &m_system =
         es.get_system<LinearImplicitSystem>("mHSystem");
 
@@ -3091,7 +3089,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems &es_fluid)
   system_source.solution->localize(*system_source.current_local_solution);
 }
 
-void PoroElastic::update_source_heir(EquationSystems &es)
+void PoroElastic::update_source_heir(EquationSystems &es, EquationSystems &es_fluid)
 {
   libMesh::MeshBase &mesh = es.get_mesh();
   const unsigned int dim = mesh.mesh_dimension();
@@ -3099,6 +3097,20 @@ void PoroElastic::update_source_heir(EquationSystems &es)
   System &system_source = es.get_system<System>("sourceHSystem");
   unsigned int u_var = system_source.variable_number("sourceHVar");
   unsigned int system_source_num = system_source.number();
+
+  const MeshBase &mesh_fluid = es_fluid.get_mesh();
+
+  LinearImplicitSystem &flow_system =
+      es_fluid.get_system<LinearImplicitSystem>("flowSystem");
+
+  NumericVector<double> &flow_data = *(flow_system.current_local_solution);
+  flow_data.close();
+
+  vector<double> flow_vec;
+  flow_data.localize(flow_vec);
+
+  const DofMap &dof_map_flow = flow_system.get_dof_map();
+  std::vector<dof_id_type> dof_indices_Q;
 
   double sigma_g = 0.5;
 
@@ -3127,7 +3139,11 @@ void PoroElastic::update_source_heir(EquationSystems &es)
       cent_diff.subtract(elem_cent);
       double dist_2 = cent_diff.norm_sq();
 
-      double flow_cur = (1.0 / 18.0) / InputParam::zone_volumes[i];
+      const Elem *elem_fluid = mesh_fluid.elem_ptr(InputParam::zone_parent[i]);
+      dof_map_flow.dof_indices(elem_fluid, dof_indices_Q, 0);
+      double Q_cur = flow_vec[dof_indices_Q[1]];
+
+      double flow_cur = (Q_cur) / InputParam::zone_volumes[i];
 
       source_cur += a_const * exp(b_const * (dist_2)) * flow_cur;
 
@@ -3143,6 +3159,10 @@ void PoroElastic::update_source_heir(EquationSystems &es)
       Point cent_diff = InputParam::zone_inlet_2[i];
       cent_diff.subtract(elem_cent);
       double dist_2 = cent_diff.norm_sq();
+
+      const Elem *elem_fluid = mesh_fluid.elem_ptr(InputParam::zone_parent_2[i]);
+      dof_map_flow.dof_indices(elem_fluid, dof_indices_Q, 0);
+      double Q_cur = flow_vec[dof_indices_Q[1]];
 
       double flow_cur = (1.0 / 120.0) / InputParam::zone_volumes_2[i];
 

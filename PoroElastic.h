@@ -214,7 +214,7 @@ public:
   static void solve_mexp_system(EquationSystems &es);
   static void define_heir_systems(EquationSystems &es);
   static void read_perm_data(EquationSystems &es, ExodusII_IO &exo_io);
-  static void update_source_heir(EquationSystems &es);
+  static void update_source_heir(EquationSystems &es, EquationSystems &es_fluid);
   static void assemble_m_heir(
       EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
 };

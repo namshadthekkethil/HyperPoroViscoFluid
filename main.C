@@ -295,6 +295,8 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
         PoroElastic::update_source(es, es_fluid);
 
         // PoroElastic::update_flowlarge(es,es_fluid);
+
+        PoroElastic::update_source_heir(es, es_fluid);
       }
       PoroElastic::update_poroelastic(es);
     }
