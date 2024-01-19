@@ -4,3 +4,9 @@ core
 *.e
 example-opt
 results/*.dat
+flow_data/*.csv
+flow_data/vessels_1d_flow_data_19.csv
+flow_data/vessels_1d_flow_data_0.csv
+*.csv
+*.out
+updated_vessels.csv

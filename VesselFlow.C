@@ -134,7 +134,6 @@ void VesselFlow::read_input()
 
 void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
 {
-
     for (int rank_i = 0; rank_i < np; rank_i++)
     {
         if (rank == rank_i)
@@ -145,14 +144,22 @@ void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
             int vess_counter = 0;
             while (!file_tree.eof())
             {
-                file_tree >> vess_i.x1 >> vess_i.y1 >> vess_i.z1 >> vess_i.x2 >>
-                    vess_i.y2 >> vess_i.z2 >> vess_i.l >> vess_i.r1 >> vess_i.r2 >>
-                    vess_i.r >> vess_i.p >> vess_i.dl >> vess_i.dr >> vess_i.inside;
-                     //>> vess_i.nt >> vess_i.init >> vess_i.zeta;
+                file_tree >> vess_i.x1 >> vess_i.y1 >> vess_i.z1 >>
+                    vess_i.x2 >> vess_i.y2 >> vess_i.z2 >>
+                    vess_i.l >> vess_i.r1 >> vess_i.r2 >> vess_i.r >>
+                    vess_i.p >> vess_i.dl >> vess_i.dr >>
+                    vess_i.inside >> vess_i.nt >> vess_i.init >> vess_i.zeta;
 
-                     vess_i.nt = 0;
-                     vess_i.init=0;
-                     vess_i.zeta=0;
+                vess_i.x1 *= InputParam::mesh_scale;
+                vess_i.y1 *= InputParam::mesh_scale;
+                vess_i.z1 *= InputParam::mesh_scale;
+                vess_i.x2 *= InputParam::mesh_scale;
+                vess_i.y2 *= InputParam::mesh_scale;
+                vess_i.z2 *= InputParam::mesh_scale;
+                vess_i.l *= InputParam::mesh_scale;
+                vess_i.r1 *= InputParam::mesh_scale;
+                vess_i.r2 *= InputParam::mesh_scale;
+                vess_i.r *= InputParam::mesh_scale;
 
                 if (file_tree.eof())
                     break;
@@ -411,13 +418,10 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
          << " gamma=" << gamma_v << endl;
     create_mesh(mesh);
     // create_mesh_3(mesh);
-    
 
     initialise_partvein(rank, np, init);
-   
-    updateImpedance();
 
-    
+    updateImpedance();
 
     string name = "flow_data_inlet";
     string fileend = ".dat";
@@ -2802,6 +2806,9 @@ void VesselFlow::writeFlowData(EquationSystems &es)
 
 void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
 {
+    cout << "vessels_in_size" << vessels_in.size() << endl;
+    cout << "vessels_size" << vessels.size() << endl;
+
     string name = "flow_data/vessels_1d_flow_data_";
     string fileend = ".csv";
     string out_frame;
@@ -2959,18 +2966,18 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                 Q1 = Q1_prime;
             }
 
-            if (vessels_in[n].dl != -10)
-            {
-                n++;
-                if (vessels_in[n].dl != -10)
-                {
-                    n++;
-                    if (vessels_in[n].dl != -10)
-                    {
-                        n++;
-                    }
-                }
-            }
+            // if (vessels_in[n].dl != -10)
+            // {
+            //     n++;
+            //     if (vessels_in[n].dl != -10)
+            //     {
+            //         n++;
+            //         if (vessels_in[n].dl != -10)
+            //         {
+            //             n++;
+            //         }
+            //     }
+            // }
 
             const Elem *elem_2 = mesh.elem_ptr(n);
             dof_map.dof_indices(elem_2, dof_indices_u, u_var);
@@ -2996,13 +3003,13 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                 Q2 = Q2_prime;
             }
 
-            vess_x1 = 0.1 * vess_x1 - 0.5 * ((-3.1772) + (3.6581));
-            vess_y1 = 0.1 * vess_y1 - 0.5 * ((-3.0591) + (3.2769));
-            vess_z1 = 0.1 * vess_z1 - 0.5 * ((0.015051) + (6.0814));
+            // vess_x1 = 0.1 * vess_x1 - 0.5 * ((-3.1772) + (3.6581));
+            // vess_y1 = 0.1 * vess_y1 - 0.5 * ((-3.0591) + (3.2769));
+            // vess_z1 = 0.1 * vess_z1 - 0.5 * ((0.015051) + (6.0814));
 
-            vess_x2 = 0.1 * vess_x2 - 0.5 * ((-3.1772) + (3.6581));
-            vess_y2 = 0.1 * vess_y2 - 0.5 * ((-3.0591) + (3.2769));
-            vess_z2 = 0.1 * vess_z2 - 0.5 * ((0.015051) + (6.0814));
+            // vess_x2 = 0.1 * vess_x2 - 0.5 * ((-3.1772) + (3.6581));
+            // vess_y2 = 0.1 * vess_y2 - 0.5 * ((-3.0591) + (3.2769));
+            // vess_z2 = 0.1 * vess_z2 - 0.5 * ((0.015051) + (6.0814));
 
             double Q1v_prime = 0.0, A1v_prime = 0.0, Q1v = 0.0, A1v = 0.0, p1v = 0.0;
             double Q2v_prime = 0.0, A2v_prime = 0.0, Q2v = 0.0, A2v = 0.0, p2v = 0.0;
@@ -3037,7 +3044,7 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
             file_vess << vess_x1 << "," << vess_y1 << ","
                       << vess_z1 << "," << vess_x2 << ","
                       << vess_y2 << "," << vess_z2 << ","
-                      << vessels[n].l * L_v * 0.1 << "," << rad1 * 0.1 << "," << rad2 * 0.1 << ","
+                      << vessels[n].l * L_v  << "," << rad1  << "," << rad2  << ","
                       << Q1 << "," << Q2 << "," << p1 << "," << p2 << ","
                       << Q1v << "," << Q2v << "," << p1v << "," << p2v << ","
                       << Q1 + Q1v << "," << Q2 + Q2v << endl;
@@ -3944,22 +3951,41 @@ void VesselFlow::initialise_partvein(int rank, int np, LibMeshInit &init)
     {
         vessels_in[i].ter_num = -10;
         vessels[i].ter_num = -10;
-        if (vessels[i].dl == -10)
-        {
-            termNum.push_back(i);
+        // if (vessels[i].dl == -10)
+        // {
+        //     termNum.push_back(i);
 
-            qArt.push_back(0);
-            qVein.push_back(0);
+        //     qArt.push_back(0);
+        //     qVein.push_back(0);
 
-            qArtMod.push_back(0);
-            qVeinMod.push_back(0);
+        //     qArtMod.push_back(0);
+        //     qVeinMod.push_back(0);
 
-            terminal_num++;
-            vessels_in[i].ter_num = terminal_num;
-            vessels[i].ter_num = terminal_num;
-            if (venous_flow == 1)
-                vessels[i + vessels_in.size()].ter_num = terminal_num;
-        }
+        //     terminal_num++;
+        //     vessels_in[i].ter_num = terminal_num;
+        //     vessels[i].ter_num = terminal_num;
+        //     if (venous_flow == 1)
+        //         vessels[i + vessels_in.size()].ter_num = terminal_num;
+        // }
+    }
+
+    for (int i = 0; i < InputParam::zone_parent.size(); i++)
+    {
+        termNum.push_back(i);
+
+        qArt.push_back(0);
+        qVein.push_back(0);
+
+        qArtMod.push_back(0);
+        qVeinMod.push_back(0);
+
+        terminal_num++;
+        vessels_in[i].ter_num = terminal_num;
+        vessels[i].ter_num = terminal_num;
+        if (venous_flow == 1)
+            vessels[i + vessels_in.size()].ter_num = terminal_num;
+        vessels_in[i].ter_num = -10;
+        vessels[i].ter_num = -10;
     }
 
     pArt.resize(N_period);
@@ -3983,13 +4009,19 @@ void VesselFlow::initialise_partvein(int rank, int np, LibMeshInit &init)
     {
         for (int j = 0; j < N_period; j++)
         {
-            for (int i = 0; i < vessels_in.size(); i++)
+            // for (int i = 0; i < vessels_in.size(); i++)
+            // {
+            //     if (vessels[i].dl == -10)
+            //     {
+            //         pArt(j).push_back(0.0);
+            //         pVein(j).push_back(0.0);
+            //     }
+            // }
+
+            for (int i = 0; i < InputParam::zone_parent.size(); i++)
             {
-                if (vessels[i].dl == -10)
-                {
-                    pArt(j).push_back(0.0);
-                    pVein(j).push_back(0.0);
-                }
+                pArt(j).push_back(0.0);
+                pVein(j).push_back(0.0);
             }
         }
     }
