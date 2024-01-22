@@ -3164,7 +3164,7 @@ void PoroElastic::update_source_heir(EquationSystems &es, EquationSystems &es_fl
       dof_map_flow.dof_indices(elem_fluid, dof_indices_Q, 0);
       double Q_cur = flow_vec[dof_indices_Q[1]];
 
-      double flow_cur = (1.0 / 120.0) / InputParam::zone_volumes_2[i];
+      double flow_cur = (Q_cur) / InputParam::zone_volumes_2[i];
 
       source_cur += a_const * exp(b_const * (dist_2)) * flow_cur;
     }
@@ -4339,9 +4339,9 @@ void PoroElastic::assemble_m_heir(
           gradNA(i) = dphi[dof_i][qp](i);
         }
 
-        Fm(dof_i) += ((m_old / dt) * phi[dof_i][qp]) * JxW[qp];// + MatVecOper::contractVec(kdivXP, gradNA) * JxW[qp];
+        Fm(dof_i) += ((m_old / dt) * phi[dof_i][qp]) * JxW[qp] + MatVecOper::contractVec(kdivXP, gradNA) * JxW[qp];
 
-        Fm2(dof_i) += ((m_old_2 / dt) * phi[dof_i][qp]) * JxW[qp];// + MatVecOper::contractVec(kdivXP_2, gradNA) * JxW[qp];
+        Fm2(dof_i) += ((m_old_2 / dt) * phi[dof_i][qp]) * JxW[qp] + MatVecOper::contractVec(kdivXP_2, gradNA) * JxW[qp];
 
         Fm(dof_i) += (source_cur-source_cur_2) * phi[dof_i][qp] * JxW[qp];
         Fm2(dof_i) += source_cur_2 * phi[dof_i][qp] * JxW[qp];

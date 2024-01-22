@@ -4727,7 +4727,7 @@ void VesselFlow::compute_residual_steady(const NumericVector<Number> &X,
 
                 if (bc_id == 1000) // left boundary
                 {
-                    double p_left = 1.0;
+                    double p_left = 133322.0;// 1.0;
                     double Q_left = system.current_solution(dof_indices_u[0]);
 
                     Fu(0) += p_left * r_const * normal_face[0].operator()(0);
