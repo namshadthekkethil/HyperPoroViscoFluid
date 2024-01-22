@@ -14,6 +14,9 @@ beta_type = 1 // 0 for constant beta, 1 for linearly dependent on r
 interface_type = 0 // 0 for pressure, 1 for pressure and kinetic energy
 wave_type = 0 // 0 for constant wave speed
 
+write_data_skip = 50
+write_data_bound = 10
+
 time_integ = 2 // 1 for BDF1, 2 for BDF 2
 inlet_bc = 0 // 0 for pressure BC, 1 for non reflecting BC
 outlet_bc = 0 // 0 for pressure BC, 1 for non reflecting BC

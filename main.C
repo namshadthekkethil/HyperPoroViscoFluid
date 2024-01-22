@@ -180,12 +180,12 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 
     cout << "count=" << count << " count_per=" << count_per << " t=" << VesselFlow::ttime << " t_per=" << count_per * VesselFlow::dt_v << " tdim=" << count * VesselFlow::dt << " tdim_per=" << VesselFlow::ttime_dim << endl;
 
-    if (((count + 1) % 5 == 0))
+    if (((count + 1) % InputParam::write_data_skip == 0))
     {
       VesselFlow::writeFlowDataTime(es, count, rank);
     }
 
-    if (((count + 1) % 10 == 0))
+    if (((count + 1) % InputParam::write_data_bound == 0))
     {
 
       VesselFlow::writeFlowDataBound(es, count, rank);
@@ -308,7 +308,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
     HyperElasticModel::update_hyperelastic_model(es);
 
-    if ((count) % 5 == 0 || InputParam::trans_soln == 0)
+    if ((count) % InputParam::write_data_skip == 0 || InputParam::trans_soln == 0)
     {
       lde.compute_stresses();
       lde.compute_J();

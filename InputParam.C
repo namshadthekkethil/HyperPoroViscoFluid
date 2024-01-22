@@ -8,6 +8,7 @@ std::string InputParam::mesh_file_name, InputParam::fibre_file_name, InputParam:
     InputParam::sheet_file_name, InputParam::zone_file_name, InputParam::zone_file_name_2;
 unsigned int InputParam::mesh_centre;
 unsigned int InputParam::n_solves,InputParam::n_total;
+int InputParam::write_data_skip, InputParam::write_data_bound;
 unsigned int InputParam::output_terminal;
 double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
 int InputParam::time_itr;
@@ -103,6 +104,9 @@ void InputParam::read_input() {
   perm_file_name = infile("perm_file_name", "frame_perm.e");
 
   time_per = infile("time_per", 0.8);
+
+  write_data_skip = infile("write_data_skip", 100);
+  write_data_bound = infile("write_data_bound", 100);
 
   output_terminal = infile("output_terminal", 0);
 

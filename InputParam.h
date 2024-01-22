@@ -106,6 +106,7 @@ public:
   static std::string mesh_file_name, fibre_file_name, sheet_file_name, perm_file_name, zone_file_name, zone_file_name_2;
   static unsigned int mesh_centre;
   static unsigned int n_solves,n_total;
+  static int write_data_skip, write_data_bound;
   static unsigned int output_terminal;
   static double ttime, dt, time_per,omega;
   static int time_itr;
