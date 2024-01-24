@@ -21,3 +21,7 @@ flow_data_noimp/*
 results_noimp/*
 flow_data/*
 results/*
+/*/
+flow_aha.dat
+flow_arteries.dat
+flow_data_inlet.dat

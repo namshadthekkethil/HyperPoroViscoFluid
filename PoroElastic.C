@@ -233,7 +233,7 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
 
   system_porous_p1p0.attach_assemble_function(assemble_porous_p1p0);
 
-  if (InputParam::aniso_perm == 1)
+  if (InputParam::heirarchy == 1)
   {
     define_heir_systems(es);
   }
@@ -2175,7 +2175,6 @@ void PoroElastic::initialise_poroelastic(EquationSystems &es)
     initialise_K(es);
   else
     read_porous_data(es);
-
 }
 
 void PoroElastic::update_poroelastic(EquationSystems &es)
@@ -2194,7 +2193,7 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
 
   // system_porous.solve();
 
-  if (InputParam::aniso_perm == 1)
+  if (InputParam::heirarchy == 1)
   {
     LinearImplicitSystem &m_system =
         es.get_system<LinearImplicitSystem>("mHSystem");
@@ -4233,70 +4232,89 @@ void PoroElastic::assemble_m_heir(
     DenseMatrix<double> K_perm(MESH_DIMENSION, MESH_DIMENSION);
     DenseMatrix<double> K_perm_2(MESH_DIMENSION, MESH_DIMENSION);
 
+    if (InputParam::anis_perm == 0)
+    {
+      K_perm.zero();
+      K_perm_2.zero();
+
+      K_perm(0, 0) = InputParam::permeability;
+      K_perm_2(0, 0) = InputParam::permeability;
+      K_perm(1, 1) = InputParam::permeability;
+      K_perm_2(1, 1) = InputParam::permeability;
+#if (MESH_DIMENSION == 3)
+      K_perm(2, 2) = InputParam::permeability;
+      K_perm_2(2, 2) = InputParam::permeability;
+#endif
+    }
+
+    else
+    {
+
 #if (MESH_DIMENSION == 2)
-    const int dof_index_00 = elem->dof_number(K_system.number(), 0, 0);
-    K_perm(0, 0) = K_solution(dof_index_00);
-    const int dof_index_01 = elem->dof_number(K_system.number(), 1, 0);
-    K_perm(0, 1) = K_solution(dof_index_01);
+      const int dof_index_00 = elem->dof_number(K_system.number(), 0, 0);
+      K_perm(0, 0) = K_solution(dof_index_00);
+      const int dof_index_01 = elem->dof_number(K_system.number(), 1, 0);
+      K_perm(0, 1) = K_solution(dof_index_01);
 
-    const int dof_index_10 = elem->dof_number(K_system.number(), 2, 0);
-    K_perm(1, 0) = K_solution(dof_index_10);
-    const int dof_index_11 = elem->dof_number(K_system.number(), 3, 0);
-    K_perm(1, 1) = K_solution(dof_index_11);
+      const int dof_index_10 = elem->dof_number(K_system.number(), 2, 0);
+      K_perm(1, 0) = K_solution(dof_index_10);
+      const int dof_index_11 = elem->dof_number(K_system.number(), 3, 0);
+      K_perm(1, 1) = K_solution(dof_index_11);
 
-    const int dof_index_00_2 = elem->dof_number(K_system.number(), 3, 0);
-    K_perm_2(0, 0) = K_solution(dof_index_00_2);
-    const int dof_index_01 = elem->dof_number(K_system.number(), 3, 0);
-    K_perm_2(0, 1) = K_solution(dof_index_01_2);
+      const int dof_index_00_2 = elem->dof_number(K_system.number(), 3, 0);
+      K_perm_2(0, 0) = K_solution(dof_index_00_2);
+      const int dof_index_01 = elem->dof_number(K_system.number(), 3, 0);
+      K_perm_2(0, 1) = K_solution(dof_index_01_2);
 
-    const int dof_index_10_2 = elem->dof_number(K_system.number(), 5, 0);
-    K_perm_2(1, 0) = K_solution(dof_index_10_2);
-    const int dof_index_11 = elem->dof_number(K_system.number(), 6, 0);
-    K_perm_2(1, 1) = K_solution(dof_index_11_2);
+      const int dof_index_10_2 = elem->dof_number(K_system.number(), 5, 0);
+      K_perm_2(1, 0) = K_solution(dof_index_10_2);
+      const int dof_index_11 = elem->dof_number(K_system.number(), 6, 0);
+      K_perm_2(1, 1) = K_solution(dof_index_11_2);
 
 #elif (MESH_DIMENSION == 3)
-    const int dof_index_00 = elem->dof_number(K_system.number(), 0, 0);
-    K_perm(0, 0) = K_solution(dof_index_00);
-    const int dof_index_01 = elem->dof_number(K_system.number(), 1, 0);
-    K_perm(0, 1) = K_solution(dof_index_01);
-    const int dof_index_02 = elem->dof_number(K_system.number(), 2, 0);
-    K_perm(0, 2) = K_solution(dof_index_02);
+      const int dof_index_00 = elem->dof_number(K_system.number(), 0, 0);
+      K_perm(0, 0) = K_solution(dof_index_00);
+      const int dof_index_01 = elem->dof_number(K_system.number(), 1, 0);
+      K_perm(0, 1) = K_solution(dof_index_01);
+      const int dof_index_02 = elem->dof_number(K_system.number(), 2, 0);
+      K_perm(0, 2) = K_solution(dof_index_02);
 
-    const int dof_index_10 = elem->dof_number(K_system.number(), 3, 0);
-    K_perm(1, 0) = K_solution(dof_index_10);
-    const int dof_index_11 = elem->dof_number(K_system.number(), 4, 0);
-    K_perm(1, 1) = K_solution(dof_index_11);
-    const int dof_index_12 = elem->dof_number(K_system.number(), 5, 0);
-    K_perm(1, 2) = K_solution(dof_index_12);
+      const int dof_index_10 = elem->dof_number(K_system.number(), 3, 0);
+      K_perm(1, 0) = K_solution(dof_index_10);
+      const int dof_index_11 = elem->dof_number(K_system.number(), 4, 0);
+      K_perm(1, 1) = K_solution(dof_index_11);
+      const int dof_index_12 = elem->dof_number(K_system.number(), 5, 0);
+      K_perm(1, 2) = K_solution(dof_index_12);
 
-    const int dof_index_20 = elem->dof_number(K_system.number(), 6, 0);
-    K_perm(2, 0) = K_solution(dof_index_20);
-    const int dof_index_21 = elem->dof_number(K_system.number(), 7, 0);
-    K_perm(2, 1) = K_solution(dof_index_21);
-    const int dof_index_22 = elem->dof_number(K_system.number(), 8, 0);
-    K_perm(2, 2) = K_solution(dof_index_22);
+      const int dof_index_20 = elem->dof_number(K_system.number(), 6, 0);
+      K_perm(2, 0) = K_solution(dof_index_20);
+      const int dof_index_21 = elem->dof_number(K_system.number(), 7, 0);
+      K_perm(2, 1) = K_solution(dof_index_21);
+      const int dof_index_22 = elem->dof_number(K_system.number(), 8, 0);
+      K_perm(2, 2) = K_solution(dof_index_22);
 
-    const int dof_index_00_2 = elem->dof_number(K_system.number(), 9, 0);
-    K_perm_2(0, 0) = K_solution(dof_index_00_2);
-    const int dof_index_01_2 = elem->dof_number(K_system.number(), 10, 0);
-    K_perm_2(0, 1) = K_solution(dof_index_01_2);
-    const int dof_index_02_2 = elem->dof_number(K_system.number(), 11, 0);
-    K_perm_2(0, 2) = K_solution(dof_index_02_2);
+      const int dof_index_00_2 = elem->dof_number(K_system.number(), 9, 0);
+      K_perm_2(0, 0) = K_solution(dof_index_00_2);
+      const int dof_index_01_2 = elem->dof_number(K_system.number(), 10, 0);
+      K_perm_2(0, 1) = K_solution(dof_index_01_2);
+      const int dof_index_02_2 = elem->dof_number(K_system.number(), 11, 0);
+      K_perm_2(0, 2) = K_solution(dof_index_02_2);
 
-    const int dof_index_10_2 = elem->dof_number(K_system.number(), 12, 0);
-    K_perm_2(1, 0) = K_solution(dof_index_10_2);
-    const int dof_index_11_2 = elem->dof_number(K_system.number(), 13, 0);
-    K_perm_2(1, 1) = K_solution(dof_index_11_2);
-    const int dof_index_12_2 = elem->dof_number(K_system.number(), 14, 0);
-    K_perm_2(1, 2) = K_solution(dof_index_12_2);
+      const int dof_index_10_2 = elem->dof_number(K_system.number(), 12, 0);
+      K_perm_2(1, 0) = K_solution(dof_index_10_2);
+      const int dof_index_11_2 = elem->dof_number(K_system.number(), 13, 0);
+      K_perm_2(1, 1) = K_solution(dof_index_11_2);
+      const int dof_index_12_2 = elem->dof_number(K_system.number(), 14, 0);
+      K_perm_2(1, 2) = K_solution(dof_index_12_2);
 
-    const int dof_index_20_2 = elem->dof_number(K_system.number(), 15, 0);
-    K_perm_2(2, 0) = K_solution(dof_index_20_2);
-    const int dof_index_21_2 = elem->dof_number(K_system.number(), 16, 0);
-    K_perm_2(2, 1) = K_solution(dof_index_21_2);
-    const int dof_index_22_2 = elem->dof_number(K_system.number(), 17, 0);
-    K_perm_2(2, 2) = K_solution(dof_index_22_2);
+      const int dof_index_20_2 = elem->dof_number(K_system.number(), 15, 0);
+      K_perm_2(2, 0) = K_solution(dof_index_20_2);
+      const int dof_index_21_2 = elem->dof_number(K_system.number(), 16, 0);
+      K_perm_2(2, 1) = K_solution(dof_index_21_2);
+      const int dof_index_22_2 = elem->dof_number(K_system.number(), 17, 0);
+      K_perm_2(2, 2) = K_solution(dof_index_22_2);
 #endif
+    }
 
     // Now we will build the element matrix and right-hand-side.
     // Constructing the RHS requires the solution and its
@@ -4343,7 +4361,7 @@ void PoroElastic::assemble_m_heir(
 
         Fm2(dof_i) += ((m_old_2 / dt) * phi[dof_i][qp]) * JxW[qp] + MatVecOper::contractVec(kdivXP_2, gradNA) * JxW[qp];
 
-        Fm(dof_i) += (source_cur-source_cur_2) * phi[dof_i][qp] * JxW[qp];
+        Fm(dof_i) += (source_cur - source_cur_2) * phi[dof_i][qp] * JxW[qp];
         Fm2(dof_i) += source_cur_2 * phi[dof_i][qp] * JxW[qp];
 
         // Matrix contributions for the uu and vv couplings.

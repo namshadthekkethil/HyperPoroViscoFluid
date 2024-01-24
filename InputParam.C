@@ -12,7 +12,7 @@ int InputParam::write_data_skip, InputParam::write_data_bound;
 unsigned int InputParam::output_terminal;
 double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
 int InputParam::time_itr;
-int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::aniso_perm;
+int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::heirarchy, InputParam::anis_perm;
 
 double InputParam::nonlinear_abs_tol, InputParam::nonlinear_rel_tol;
 unsigned int InputParam::nonlinear_max_its;
@@ -100,7 +100,9 @@ void InputParam::read_input() {
   n_solves = infile("n_solves", 10);
   dt = infile("dt", 0.01);
 
-  aniso_perm = infile("aniso_perm", 0);
+  heirarchy = infile("heirarchy", 0);
+
+  anis_perm = infile("anis_perm",0);
   perm_file_name = infile("perm_file_name", "frame_perm.e");
 
   time_per = infile("time_per", 0.8);
@@ -269,7 +271,7 @@ void InputParam::read_input() {
   brinkman = infile("brinkman", 0);
   viscocity = infile("viscocity", 0.001);
 
-  if(porous == 1 && aniso_perm == 1)
+  if (porous == 1 && heirarchy == 1)
   {
     zone_file_name = infile("zone_file_name", "zone_data.dat");
     zone_file_name_2 = infile("zone_file_name_2", "zone_data_2.dat");

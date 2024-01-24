@@ -29,7 +29,9 @@ darcy_solver = 0
 
 porous = 1
 
-aniso_perm = 1
+heirarchy = 1
+
+anis_perm = 1
 
 approx_order = FIRST
 fe_family = LAGRANGE
@@ -122,7 +124,7 @@ sink_const = 0.0 // 3.0e-6
 sink_prssr = 0.0 // 1.3e4
 biot_modulus = 2.18e6
 kappa_0 = 1.0e6 // 1.0e10 //0.1
-permeability = 1.0 // 2.0e-6
+permeability = 1.0e-4 // 2.0e-6
 
 q1 = 0.022e4
 q2 = 1.009e4

@@ -337,7 +337,7 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 void define_all_systems(Mesh &mesh, Mesh &mesh_cur, EquationSystems &es, EquationSystems &es_cur,
                         int rank, LargeDeformationElasticity &lde)
 {
-  if (InputParam::porous == 0 || InputParam::aniso_perm == 0)
+  if (InputParam::porous == 0 || InputParam::heirarchy == 0)
   {
     InputParam::read_mesh(mesh);
     InputParam::read_mesh(mesh_cur);

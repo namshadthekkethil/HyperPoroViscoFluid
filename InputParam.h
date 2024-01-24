@@ -111,7 +111,7 @@ public:
   static double ttime, dt, time_per,omega;
   static int time_itr;
 
-  static int inertia, trans_soln, aniso_perm;
+  static int inertia, trans_soln, heirarchy, anis_perm;
 
   static int strain_model;
 
