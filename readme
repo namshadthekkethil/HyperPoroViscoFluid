@@ -1,0 +1,2 @@
+If heirarchy is one, we need to load the datas corresponding to porosities and permeabilities from a data file generated from the folder "Heirarchy"
+SImilary data for VesselFlow are loaded from data generated using "Heirarchy"

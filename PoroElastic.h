@@ -217,6 +217,9 @@ public:
   static void update_source_heir(EquationSystems &es, EquationSystems &es_fluid);
   static void assemble_m_heir(
       EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
+  static void update_ppore_heir(EquationSystems &es);
+  static void assemble_darcy_heir(
+      EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
 };
 
 #endif
