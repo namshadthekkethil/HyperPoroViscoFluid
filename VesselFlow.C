@@ -59,11 +59,9 @@ VesselFlow::~VesselFlow() {}
 
 void VesselFlow::read_input()
 {
-    // GetPot infile("input_1D.in");
-    // GetPot infile("input_1D_Quart.in");
-    // GetPot infile("input_1D_Shervin.in");
-    // GetPot infile("input_1D_Lee_2008.in");
-    GetPot infile("input_1D_Lee_LV.in");
+    GetPot infile1("input.in");
+    std::string input_file_name = infile1("input_file_name_fluid", "input_1D_Lee_LV.in");
+    GetPot infile(input_file_name);
 
     fsi_flow = infile("fsi_flow", 1);
 
@@ -216,9 +214,7 @@ void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
                 }
             }
 
-            // for (int i = 0; i < vessels_in.size(); i++) {
-            //   cout << "i=" << i << " ter=" << vessels_in[i].ter << endl;
-            // }
+
 
             file_tree.close();
         }
@@ -269,7 +265,19 @@ void VesselFlow::update_vessels()
 void VesselFlow::update_mesh_data(Mesh &mesh)
 {
     mesh.allow_renumbering(false);
-    mesh.read(InputParam::mesh_file_name, NULL);
+
+    if (InputParam::porous == 0 || InputParam::heirarchy == 0)
+        mesh.read(InputParam::mesh_file_name, NULL);
+
+    else
+    {
+        ExodusII_IO exo_io(mesh, NULL);
+        if (mesh.processor_id() == 0)
+            exo_io.read(InputParam::perm_file_name);
+        MeshCommunication().broadcast(mesh);
+    }
+
+    mesh.prepare_for_use();
 
     MeshBase::const_element_iterator el = mesh.active_elements_begin();
     const MeshBase::const_element_iterator end_el =

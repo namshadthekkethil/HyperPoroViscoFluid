@@ -1,6 +1,4 @@
-mesh_file_name =  LVtrunk_heart_real_Lee_coupl.xda // LVtrunk_heart_exodusII_Lee_new.e // LVtrunk_heart_exodusII.e // LVtrunk_heart_exodusII_Lee_new.e // cell_2d_0_5_20.unv //cell_2d_2_5_5000.unv //../../../mesh_files/boys_cube_2d_0_5.unv
-fibre_file_name = fiberDir_Lee_coupl.txt // fiberDir_Lee_new.txt // fibreDir.txt //fibreDirBoyce.txt //fibreDir_Lee.txt //fibreDir.txt //fibreDir_benchmark.txt
-sheet_file_name = sheetDir_Lee_coupl.txt // fiberDir_Lee_new.txt //sheetDir.txt //sheetDir_Lee.txt
+mesh_file_name =  Square_mesh.e
 perm_file_name = frame_perm.e
 zone_file_name = zone_data.dat
 zone_file_name_2 = zone_data_2.dat
@@ -33,7 +31,7 @@ heirarchy = 1
 
 anis_perm = 1
 
-solve_hyper = 1
+solve_hyper = 0
 
 approx_order = FIRST
 fe_family = LAGRANGE
@@ -70,27 +68,7 @@ n_total = 3276
 time_per = 0.8
 
 
-//clamp_x_bcs = '2 3'
-//clamp_y_bcs = '1'
-clamp_z_bcs = '4098'
 
-//force_x_bcs = '2 3'
-//force_y_bcs = '3'
-//force_z_bcs = '4'
-
-//force_x_values = '2 3'
-//force_y_values = '-200.0'
-//force_z_values = '4'
-
-pressure_bcs = '4097'
-pressure_values = '-1.71e4'
-
-torsion_bc = 4098
-torsion_type = 0
-torsion_value = 0.0
-
-//m_bcs = '1 2'
-//m_values = '0.2 0.0'
 
 aHO =  2244.87
 bHO = 1.6215
@@ -111,7 +89,7 @@ vabyd = '1.0e-1'
 
 
 
-strain_model = 1 //2
+strain_model = 2 //2
 
 pmat_type = 1
 
@@ -125,8 +103,8 @@ source_prssr = 2.7e4
 sink_const = 0.0 // 3.0e-6
 sink_prssr = 0.0 // 1.3e4
 biot_modulus = 2.18e6
-kappa_0 = 1.0e6 // 1.0e10 //0.1
-permeability = 1.0e-4 // 2.0e-6
+kappa_0 = 1.0 // 0.01 // 0.01 //  1.0e6 // 1.0e10 //0.1
+permeability = 1.0 // 1.0 // 1.0e-4 // 2.0e-6
 
 q1 = 0.022e4
 q2 = 1.009e4

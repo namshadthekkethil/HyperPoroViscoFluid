@@ -12,7 +12,8 @@ int InputParam::write_data_skip, InputParam::write_data_bound;
 unsigned int InputParam::output_terminal;
 double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
 int InputParam::time_itr;
-int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::heirarchy, InputParam::anis_perm;
+int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::heirarchy, InputParam::anis_perm,
+    InputParam::solve_hyper;
 
 double InputParam::nonlinear_abs_tol, InputParam::nonlinear_rel_tol;
 unsigned int InputParam::nonlinear_max_its;
@@ -32,7 +33,8 @@ double InputParam::viscocity;
 
 vector<int> InputParam::zone_parent, InputParam::zone_parent_2;
 vector<Point> InputParam::zone_inlet, InputParam::zone_inlet_2;
-vector<double> InputParam::zone_volumes, InputParam::zone_volumes_2;
+vector<double> InputParam::zone_volumes, InputParam::zone_volumes_2, InputParam::zone_flow, InputParam::zone_flow_2,
+    InputParam::zone_zetadiff_2, InputParam::zone_zeta_2;
 
 boundary_id_type InputParam::clamp_x_size,
     InputParam::clamp_y_size;
@@ -114,6 +116,8 @@ void InputParam::read_input() {
 
   inertia = infile("inertia", 0);
   trans_soln = infile("trans_soln", 1);
+
+  solve_hyper = infile("solve_hyper", 1);
 
   strain_model = infile("strain_model", 1);
 
@@ -290,13 +294,14 @@ void InputParam::read_zone_data()
   int zone_parent_cur = 0;
   Point zone_inlet_cur;
   double zone_volumes_cur = 0.0;
+  double zone_flow_cur = 0.0;
   while (!file_zone.eof())
   {
-    file_zone >> zone_parent_cur >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    file_zone >> zone_inlet_cur(0) >> zone_inlet_cur(1);
     if(MESH_DIMENSION == 3)
       file_zone >> zone_inlet_cur(2);
 
-    file_zone >> zone_volumes_cur;
+    file_zone >> zone_volumes_cur >> zone_parent_cur >> zone_flow_cur;
 
     zone_inlet_cur *= mesh_scale;
     zone_volumes_cur *= mesh_scale * mesh_scale * mesh_scale;
@@ -308,20 +313,24 @@ void InputParam::read_zone_data()
       zone_parent.push_back(zone_parent_cur);
       zone_inlet.push_back(zone_inlet_cur);
       zone_volumes.push_back(zone_volumes_cur);
+      zone_flow.push_back(zone_flow_cur);
     }
   }
 
   file_zone.close();
+
+  double zetadiff_cur = 0.0;
+  double zeta_cur = 0.0;
 
   ifstream file_zone_2;
   file_zone_2.open(zone_file_name_2);
 
   while (!file_zone_2.eof())
   {
-    file_zone_2 >> zone_parent_cur >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    file_zone_2 >> zone_inlet_cur(0) >> zone_inlet_cur(1);
     if (MESH_DIMENSION == 3)
       file_zone_2 >> zone_inlet_cur(2);
-    file_zone_2 >> zone_volumes_cur;
+    file_zone_2 >> zone_volumes_cur >> zone_parent_cur >> zone_flow_cur >> zetadiff_cur >> zeta_cur;
 
     zone_inlet_cur *= mesh_scale;
     zone_volumes_cur *= mesh_scale * mesh_scale * mesh_scale;
@@ -334,6 +343,9 @@ void InputParam::read_zone_data()
       zone_parent_2.push_back(zone_parent_cur);
       zone_inlet_2.push_back(zone_inlet_cur);
       zone_volumes_2.push_back(zone_volumes_cur);
+      zone_flow_2.push_back(zone_flow_cur);
+      zone_zetadiff_2.push_back(zetadiff_cur);
+      zone_zeta_2.push_back(zeta_cur);
     }
   }
 

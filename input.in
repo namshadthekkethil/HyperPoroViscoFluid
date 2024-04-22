@@ -1,2 +1,3 @@
-input_file_name = input_LV_Lee.in
-output_file_name = output_LV_Lee.e
+input_file_name = input_Square.in // input_LV_Lee.in
+input_file_name_fluid = input_flow_square.in
+output_file_name = output_square.e // output_LV_Lee.e

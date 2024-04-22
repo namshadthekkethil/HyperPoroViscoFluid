@@ -111,7 +111,7 @@ public:
   static double ttime, dt, time_per,omega;
   static int time_itr;
 
-  static int inertia, trans_soln, heirarchy, anis_perm;
+  static int inertia, trans_soln, heirarchy, anis_perm, solve_hyper;
 
   static int strain_model;
 
@@ -126,7 +126,7 @@ public:
   static double kappa_0;
   static vector<int> zone_parent, zone_parent_2;
   static vector<Point> zone_inlet, zone_inlet_2;
-  static vector<double> zone_volumes, zone_volumes_2;
+  static vector<double> zone_volumes, zone_volumes_2, zone_flow, zone_flow_2, zone_zetadiff_2, zone_zeta_2;
 
   static boundary_id_type clamp_x_size, clamp_y_size;
   static DenseVector<boundary_id_type> clamp_x_bcs, clamp_y_bcs;
