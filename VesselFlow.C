@@ -221,6 +221,8 @@ void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
     }
 
     MPI_Barrier(init.comm().get());
+
+
 }
 
 void VesselFlow::update_vessels()
@@ -426,6 +428,8 @@ void VesselFlow::initialise_1Dflow(Mesh &mesh, int rank, int np,
          << " gamma=" << gamma_v << endl;
     create_mesh(mesh);
     // create_mesh_3(mesh);
+
+    
 
     initialise_partvein(rank, np, init);
 
@@ -653,6 +657,7 @@ void VesselFlow::add_element_node(Mesh &mesh, int i)
 
             if (vessels[vessels[i].dl].dl == -10)
                 mesh.boundary_info->add_side(elem_l, 1, 4000);
+
         }
 
         else
@@ -3295,6 +3300,17 @@ double VesselFlow::PInlet(double time_v)
             p_inlet = 70.712 + (132.59 - 70.712) * (1 - exp(-(pow(ttime_dim - 0.55, 2)) / 0.004));
         else
             p_inlet = 101.776 + (132.53 - 101.776) * (1 - exp(-(pow(0.8 - (ttime_dim), 2)) / 0.0005));
+
+        p_inlet *= 0.13332;
+    }
+
+    else if (pin_type == 6)
+    {
+
+        if (ttime_dim < t_load)
+            p_inlet = (p_in_const / t_load) * ttime_dim;
+        else if(ttime_dim < 2.0*t_load)
+            p_inlet = p_in_const - ((p_in_const / t_load) * (ttime_dim-t_load));
 
         p_inlet *= 0.13332;
     }

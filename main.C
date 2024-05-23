@@ -180,7 +180,7 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
       }
     }
 
-    cout << "count=" << count << " count_per=" << count_per << " t=" << VesselFlow::ttime << " t_per=" << count_per * VesselFlow::dt_v << " tdim=" << count * VesselFlow::dt << " tdim_per=" << VesselFlow::ttime_dim << endl;
+    // cout << "count=" << count << " count_per=" << count_per << " t=" << VesselFlow::ttime << " t_per=" << count_per * VesselFlow::dt_v << " tdim=" << count * VesselFlow::dt << " tdim_per=" << VesselFlow::ttime_dim << endl;
 
     if (((count + 1) % InputParam::write_data_skip == 0))
     {
@@ -253,6 +253,8 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
   VesselFlow::update_qartvein(rank);
 #endif
 
+cout<<"AFTER INTITIALISATION"<<endl;
+
   int count_per = 0;
 
   for (unsigned int count = 1; count < InputParam::n_total; count++)
@@ -267,7 +269,6 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
     run_time_step_fluid(es_fluid, mesh_fluid, rank, init, count);
 #endif
 
-    cout << "AFTER RUN TIME STEP FLUID" << endl;
 
     if (InputParam::torsion_type == 4)
       count_per = count;
@@ -292,12 +293,11 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
       lde.solve_lde();
     lde.compute_pmono();
 
-    cout<<"BEFORE MOVE MESH"<<endl;
-
-
-    // lde.move_mesh();
-
-    cout << "AFTER MOVE MESH" << endl;
+    if(InputParam::second_order_elem == 0)
+    {
+      lde.move_mesh();
+    }
+    
 
     if (InputParam::porous == 1)
     {
@@ -314,10 +314,6 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
       }
       PoroElastic::update_poroelastic(es);
     }
-
-    cout << "ALL GOOD" << endl;
-
-    cout << "BEFORES UPDATE POSTPROCESS" << endl;
 
     if (InputParam::porous == 1)
     {
@@ -336,12 +332,21 @@ void run_time_step(EquationSystems &es, EquationSystems &es_cur, EquationSystems
 
       // HyperElasticModel::compute_pext(es);
 
-      HyperElasticModel::update_total_velocity_displacement(es);
-      HyperElasticModel::compute_Jtot(es);
+      
+      if(InputParam::second_order_elem == 0)
+      {
+        HyperElasticModel::update_total_velocity_displacement(es);
+        HyperElasticModel::compute_Jtot(es);
+      }
+
+      
+      
 
       count_write++;
       exo_io.write_timestep(out_frame, es, count_write, InputParam::ttime);
     }
+
+    cout << "count="<<count<< " ttime=" << InputParam::ttime << endl;
 
     file_result.open(out_results, ios::app);
     PostProcess::compute_skeleton_volume(es, es_cur, J_total, m_total);
@@ -428,13 +433,10 @@ void solve_systems(LibMeshInit &init, int rank, int np)
 
   define_all_systems(mesh, mesh_cur, equation_systems, equation_systems_cur, rank, lde);
 
-  cout << "EVERYTHING IS FINE EVERYTHING IS FINE EVERYTHING IS FINE" << endl;
-
 #if (FLUIDFLOW == 1)
   equation_systems_fluid.init();
 #endif
 
-  cout << "BEFORE INIT HYPERELASTICs" << endl;
 
   HyperElasticModel::init_hyperelastic_model(equation_systems, rank);
 
@@ -549,7 +551,6 @@ int main(int argc, char **argv)
 
   PostProcess::init_postprocess(rank);
 
-  cout << "Initialise postprocess" << endl;
 
   auto start = high_resolution_clock::now();
 

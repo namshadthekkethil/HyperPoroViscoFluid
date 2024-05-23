@@ -1,13 +1,10 @@
 {
     "files.associations": {
         "PoroElastic.C": "cpp",
-        "VesselFlow.C": "cpp",
-        "main.C": "cpp",
         "InputParam.C": "cpp",
-        "Unsteady.C": "cpp",
         "BoundaryCond.C": "cpp",
-        "ActiveContra.C": "cpp",
-        "PostProcess.C": "cpp",
-        "HyperElasticModel.C": "cpp"
+        "main.C": "cpp",
+        "VesselFlow.C": "cpp",
+        "Admittance.C": "cpp"
     }
 }
