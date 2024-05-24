@@ -97,9 +97,9 @@ using namespace std;
 typedef struct Vess {
   double x1, y1, z1, x2, y2, z2, bl, br, l, r, r1, r2, p1, p2, Q;
   int p, dl, dr, nt, n1, n2, e_id,e_near;
-  int i1, i2, i3, ter, i_in, inside,ter_num, init;
+  int i1, i2, i3, ter, i_in, inside,ter_num, init,i_main_par;
   double beta, pext, zeta;
-  double A1,A2,Q1,Q2,Q3;
+  double A0,A1,A2,Q1,Q2,Q3;
   double A1Old,A2Old,Q1Old,Q2Old,Q3Old;
   double A1n1,A2n1,Q1n1,Q2n1,Q3n1;
 } Vess;
