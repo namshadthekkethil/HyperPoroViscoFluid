@@ -10,10 +10,10 @@ mesh_dim = 3 //2
 
 second_order_elem = 0 // 0 for first order 1 for second order
 
-write_data_skip = 5 // 50
+write_data_skip = 50 // 20 // 5 // 50
 write_data_bound = 10
 
-dt = 0.3 // 0.001 // 0.001 // 0.000976562 // 0.001 //0.000125 // 0.0002// 0.000125 //0.001 //0.001
+dt = 0.9 // 0.001 // 0.001 // 0.000976562 // 0.001 //0.000125 // 0.0002// 0.000125 //0.001 //0.001
 
 output_terminal = 1
 

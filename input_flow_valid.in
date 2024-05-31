@@ -1,11 +1,11 @@
-vessel_file = vessels_generated_refined_data.dat // vessels_generated_heir_prim.dat // updated_vessels_Lee_data_term_rad_mod.dat // updated_vessels_Lee_inside_data_mod.dat // updated_vessels_Lee_inside_data.dat // updated_vessels_Lee_data.dat // updated_vessels_Lee_2008_data.dat // vessels_mesh_data_Shervin.dat // vessels_mesh_data_Qaurt_fine.dat // vessels_single_mesh_data_0_1.dat
+vessel_file = vessels_generated_refined_cube_0_0001.dat // vessels_generated_refined_cube.dat // vessels_generated_refined_data.dat // vessels_generated_heir_prim.dat // updated_vessels_Lee_data_term_rad_mod.dat // updated_vessels_Lee_inside_data_mod.dat // updated_vessels_Lee_inside_data.dat // updated_vessels_Lee_data.dat // updated_vessels_Lee_2008_data.dat // vessels_mesh_data_Shervin.dat // vessels_mesh_data_Qaurt_fine.dat // vessels_single_mesh_data_0_1.dat
 
 restart = 0
 restart_part_vein = 0
 st_tree = 0
 
-restart_file_name = restart_data_double_32767.dat
-partvein_file_name = partvein_data_double_32767.dat
+restart_file_name = restart_data_1023.dat // restart_data_double_32767.dat
+partvein_file_name = partvein_data_1023.dat // partvein_data_double_32767.dat
 
 fsi_flow = 1 // 0 for Poisuille flow, 1 for fsi
 
@@ -25,17 +25,17 @@ L_v = 1.0 // in mm
 rho_v = 1.0e-6 // in kg/mm^3
 mu_v = 3.2e-6 // in kg/mms
 alpha_0 = 1.25 // 1.25
-beta_0 = 20.94 // 418.86 // 0.0314 // 100.0 // 11.82 //  83.0 // 451352.0 //.0 // 1.256e6 // in kg/s^2
+beta_0 = 11.81 // 11.81 // 11.81 // 20.94 // 418.86 // 0.0314 // 100.0 // 11.82 //  83.0 // 451352.0 //.0 // 1.256e6 // in kg/s^2
 p_0 = 1.0 // 10.0 // 1.0 // 2.66e6 // kg/mms^2
 c_v = 0.75e4 // 1.5e4 // mm/s
 dt = 0.001 // 0.00003 // 0.00001 // 0.0316 // 0.5 // 1.12e-2 // 0.1 // 0.477 // 1.0 non-dimensional
 gamma_perm = 1.0
 
-pin_type = 2 // 5
+pin_type = 8 // 7 // 2 // 5
 pout_type = 0 // 10
 pext_type = 0
 
-p_in_const = 1.0 // 101.8 // kPa
+p_in_const = 10.1776 // 101.776 // 7.5 // 7.5 // 1.0 // 101.776 // 1.0 // 101.8 // kPa
 p_out_const = 0.0 // kPa
 p_ext_const = 0.0 // kPa
 
@@ -45,7 +45,7 @@ p_systole = 120.0
 venous_flow = 0
 
 t_load = 0.1 // 0.1 // s
-time_per = 0.3 // 0.8 //0.2 // 0.25  // s
+time_per = 0.9 // 0.2 // 0.8 //0.2 // 0.25  // s
 
-N_period = 1024 // 10240 // 1024 // 32768
+N_period = 8192 // 8192 // 8192 // 1024 // 2048 // 1024 // 2048 // 1024 // 10240 // 1024 // 32768
 N_total = 327680

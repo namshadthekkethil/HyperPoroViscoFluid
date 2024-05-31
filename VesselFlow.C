@@ -148,16 +148,16 @@ void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
                     vess_i.p >> vess_i.dl >> vess_i.dr >>
                     vess_i.inside >> vess_i.nt >> vess_i.init >> vess_i.zeta >> vess_i.i_main_par;
 
-                vess_i.x1 *= InputParam::mesh_scale;
-                vess_i.y1 *= InputParam::mesh_scale;
-                vess_i.z1 *= InputParam::mesh_scale;
-                vess_i.x2 *= InputParam::mesh_scale;
-                vess_i.y2 *= InputParam::mesh_scale;
-                vess_i.z2 *= InputParam::mesh_scale;
-                vess_i.l *= InputParam::mesh_scale;
-                vess_i.r1 *= InputParam::mesh_scale;
-                vess_i.r2 *= InputParam::mesh_scale;
-                vess_i.r *= InputParam::mesh_scale;
+                // vess_i.x1 *= InputParam::mesh_scale;
+                // vess_i.y1 *= InputParam::mesh_scale;
+                // vess_i.z1 *= InputParam::mesh_scale;
+                // vess_i.x2 *= InputParam::mesh_scale;
+                // vess_i.y2 *= InputParam::mesh_scale;
+                // vess_i.z2 *= InputParam::mesh_scale;
+                // vess_i.l *= InputParam::mesh_scale;
+                // vess_i.r1 *= 0.5;
+                // vess_i.r2 *= 0.5;
+                // vess_i.r *= 0.5;
 
                 vess_i.r = 0.5*(vess_i.r1+vess_i.r2);
 
@@ -211,7 +211,13 @@ void VesselFlow::read_vessel_data(int rank, int np, LibMeshInit &init)
 
             for (int i = 0; i < vessels_in.size(); i++)
             {
-                vessels_in[i].A0 = M_PI*pow(vessels_in[vessels_in[i].i_main_par].r1,2);
+                vessels_in[i].A0 = M_PI * pow(vessels_in[i].r1, 2);
+                vessels_in[i].A1 = vessels_in[i].A0;
+                vessels_in[i].A2 = vessels_in[i].A0;
+
+                // vessels_in[i].r1 = vessels_in[vessels_in[i].i_main_par].r1;
+                // vessels_in[i].r2 = vessels_in[i].r1;
+                // vessels_in[i].r = vessels_in[i].r1;
                 if (vessels_in[i].ter == 2)
                 {
                     vessels_in[vessels_in[i].dl].ter = 3;
@@ -1405,11 +1411,16 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                         Kpp(1, j) = 0.0;
                     }
 
-                    double A0_cur = M_PI * pow(vessels[elem_id].r, 2);
+                    double A0_cur = vessels[elem_id].A0;// M_PI * pow(vessels[elem_id].r, 2);
                     double A0bybeta = A0_cur / vessels[elem_id].beta;
 
+                    // double sqrt_At_cur =
+                    //     sqrt(A0_cur) +
+                    //     A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
+                    //                 sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
+                    //                     system.current_solution(dof_indices_u[1]));
                     double sqrt_At_cur =
-                        sqrt(A0_cur) +
+                        sqrt(vessels[elem_id].A2) +
                         A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
                                     sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
                                         system.current_solution(dof_indices_u[1]));
@@ -1503,11 +1514,17 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                         double Avout_prime = flow_vec[dof_indices_neighbor_out_p[1]];
                         double Avout = Aaout_prime * L_v * L_v;
 
-                        Kpp(1, 1) = -(y11(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        // Kpp(1, 1) = -(y11(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        //               (1.0 / (2.0 * sqrt(Aaout)))) /
+                        //             (sqrt(p_0 / rho_v) * L_v * L_v);
+                        Kpp(1, 1) = -(y11(0) * (vessels[elem_id].beta / vessels[elem_id].A0) *
                                       (1.0 / (2.0 * sqrt(Aaout)))) /
                                     (sqrt(p_0 / rho_v) * L_v * L_v);
 
-                        Kppnout(1, 1) = -(y12(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        // Kppnout(1, 1) = -(y12(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        //                   (1.0 / (2.0 * sqrt(Avout)))) /
+                        //                 (sqrt(p_0 / rho_v) * L_v * L_v);
+                        Kppnout(1, 1) = -(y12(0) * (vessels[elem_id].beta / vessels[elem_id].A0) *
                                           (1.0 / (2.0 * sqrt(Avout)))) /
                                         (sqrt(p_0 / rho_v) * L_v * L_v);
                     }
@@ -1570,8 +1587,8 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                     Kup(1, 1) += dconst_2_dp * (dAdt_b + dQdx_b);
 
                     double A_n = flow_vec[dof_indices_neighbor_out_p[1]];
-                    double A_n0 = M_PI * pow(vessels[elem_id_n_out].r, 2);
-                    double A0_b = M_PI * pow(vessels[elem_id].r, 2);
+                    double A_n0 = vessels[elem_id_n_out].A0;// M_PI * pow(vessels[elem_id_n_out].r, 2);
+                    double A0_b = vessels[elem_id].A0;// M_PI * pow(vessels[elem_id].r, 2);
 
                     double Q_n = flow_vec[dof_indices_neighbor_out_u[1]];
 
@@ -1589,11 +1606,17 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                     {
                         if (interface_type == 0)
                         {
+                            // Kpp(1, 1) += ((vessels[elem_id].beta / A0_b) /
+                            //               ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                            //              (0.5 / sqrt(A_new));
+                            // Kppnout(1, 1) -= ((vessels[elem_id_n_out].beta / A_n0) /
+                            //                   ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                            //                  (0.5 / sqrt(A_n));
                             Kpp(1, 1) += ((vessels[elem_id].beta / A0_b) /
-                                          ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                                          ((vessels[0].beta / vessels[0].A0))) *
                                          (0.5 / sqrt(A_new));
                             Kppnout(1, 1) -= ((vessels[elem_id_n_out].beta / A_n0) /
-                                              ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                                              ((vessels[0].beta / vessels[0].A0))) *
                                              (0.5 / sqrt(A_n));
                         }
 
@@ -1618,11 +1641,14 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
                         double Avout_prime = flow_vec[dof_indices_p[1]];
                         double Avout = Aaout_prime * L_v * L_v;
 
-                        Kppnout(1, 1) = -(y21(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        // Kppnout(1, 1) = -(y21(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        //                   (1.0 / (2.0 * sqrt(Aaout)))) /
+                        //                 (sqrt(p_0 / rho_v) * L_v * L_v);
+                        Kppnout(1, 1) = -(y21(0) * (vessels[elem_id].beta / vessels[elem_id].A0) *
                                           (1.0 / (2.0 * sqrt(Aaout)))) /
                                         (sqrt(p_0 / rho_v) * L_v * L_v);
 
-                        Kpp(1, 1) = -(y22(0) * (vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                        Kpp(1, 1) = -(y22(0) * (vessels[elem_id].beta / vessels[elem_id].A0) *
                                       (1.0 / (2.0 * sqrt(Avout)))) /
                                     (sqrt(p_0 / rho_v) * L_v * L_v);
                     }
@@ -1691,8 +1717,8 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
             double A_n = flow_vec
                 [dof_indices_neighbor_p
                      [1]]; // system.current_solution(dof_indices_neighbor_p[1]);
-            double A_n0 = M_PI * pow(vessels[elem_id_n].r, 2);
-            double A0_b = M_PI * pow(vessels[elem_id].r, 2);
+            double A_n0 = vessels[elem_id_n].A0;// M_PI * pow(vessels[elem_id_n].r, 2);
+            double A0_b = vessels[elem_id].A0;// M_PI * pow(vessels[elem_id].r, 2);
 
             double Q_n = flow_vec
                 [dof_indices_neighbor_u
@@ -1711,10 +1737,10 @@ void VesselFlow::compute_jacobian(const NumericVector<Number> &,
             if (interface_type == 0)
             {
                 Kpp(0, 0) += ((vessels[elem_id].beta / A0_b) /
-                              ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                              ((vessels[0].beta / vessels[0].A0))) *
                              (0.5 / sqrt(A_new));
                 Kppn(0, 1) -= ((vessels[elem_id_n].beta / A_n0) /
-                               ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                               ((vessels[0].beta / vessels[0].A0))) *
                               (0.5 / sqrt(A_n));
             }
 
@@ -2334,14 +2360,17 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                 {
                     Fp(1) = 0.0;
 
-                    double A0_cur = M_PI * pow(vessels[elem_id].r, 2);
+                    double A0_cur = vessels[elem_id].A0;// M_PI * pow(vessels[elem_id].r, 2);
                     double A0bybeta = A0_cur / vessels[elem_id].beta;
-                    double At_cur = pow(
-                        sqrt(A0_cur) +
-                            A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
-                                        sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
-                                            system.current_solution(dof_indices_u[1])),
-                        2);
+                    // double At_cur = pow(sqrt(A0_cur) +
+                    //         A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
+                    //                     sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
+                    //                         system.current_solution(dof_indices_u[1])),2);
+                    double At_cur = pow(sqrt(vessels[elem_id].A2) +
+                                            A0bybeta * ((POutlet(ttime, elem_id) - PExt(elem_id)) +
+                                                        sqrt(p_0 / rho_v) * ((L_v * L_v) / gamma_perm) *
+                                                            system.current_solution(dof_indices_u[1])),
+                                        2);
 
                     Fp(1) += system.current_solution(dof_indices_p[1]);
                     Fp(1) += -At_cur;
@@ -2411,14 +2440,20 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                         {
                             double Aaout_prime = flow_vec[dof_indices_p[1]];
                             double Aaout = Aaout_prime * L_v * L_v;
-                            double paout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
-                                            (sqrt(Aaout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            // double paout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                            //                 (sqrt(Aaout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            //                (vessels[elem_id].pext - PExt(0));
+                            double paout = ((vessels[elem_id].beta / vessels[elem_id].A0) *
+                                            (sqrt(Aaout) - sqrt(vessels[elem_id].A2))) +
                                            (vessels[elem_id].pext - PExt(0));
 
                             double Avout_prime = flow_vec[dof_indices_neighbor_out_p[1]];
                             double Avout = Avout_prime * L_v * L_v;
-                            double pvout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
-                                            (sqrt(Avout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            // double pvout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                            //                 (sqrt(Avout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            //                (vessels[elem_id].pext - PExt(0));
+                            double pvout = ((vessels[elem_id].beta / vessels[elem_id].A0) *
+                                            (sqrt(Avout) - sqrt(vessels[elem_id].A2))) +
                                            (vessels[elem_id].pext - PExt(0));
 
                             double qart_cur = qArtMod[vessel_ter_num] +
@@ -2474,8 +2509,8 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                     Fu(1) += gamma_v * (Q_b / p_b);
 
                     double A_n = flow_vec[dof_indices_neighbor_out_p[1]];
-                    double A_n0 = M_PI * pow(vessels[elem_id_n_out].r, 2);
-                    double A0_b = M_PI * pow(vessels[elem_id].r, 2);
+                    double A_n0 = vessels[elem_id_n_out].A0;// M_PI * pow(vessels[elem_id_n_out].r, 2);
+                    double A0_b = vessels[elem_id].A0;// M_PI * pow(vessels[elem_id].r, 2);
 
                     double Q_n = flow_vec[dof_indices_neighbor_out_u[1]];
 
@@ -2483,12 +2518,19 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                     {
                         if (interface_type == 0)
                         {
+                            // Fp(1) = ((vessels[elem_id].beta / A0_b) /
+                            //          ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                            //         (sqrt(A_new) - sqrt(A0_b));
+                            // Fp(1) -= ((vessels[elem_id_n_out].beta / A_n0) /
+                            //           ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                            //          (sqrt(A_n) - sqrt(A_n0));
+
                             Fp(1) = ((vessels[elem_id].beta / A0_b) /
-                                     ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
-                                    (sqrt(A_new) - sqrt(A0_b));
+                                     ((vessels[0].beta / vessels[0].A0))) *
+                                    (sqrt(A_new) - sqrt(vessels[elem_id].A2));
                             Fp(1) -= ((vessels[elem_id_n_out].beta / A_n0) /
-                                      ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
-                                     (sqrt(A_n) - sqrt(A_n0));
+                                      ((vessels[0].beta / vessels[0].A0))) *
+                                     (sqrt(A_n) - sqrt(vessels[elem_id_n_out].A2));
 
                             /* Fp(1) += (vessels[elem_id].pext - vessels[elem_id_n_out].pext) /
                                      ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2)))); */
@@ -2496,9 +2538,10 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
 
                         else if (interface_type == 1)
                         {
-                            Fp(1) = (vessels[elem_id].beta / A0_b) * (sqrt(A_new) - sqrt(A0_b));
+                            // Fp(1) = (vessels[elem_id].beta / A0_b) * (sqrt(A_new) - sqrt(A0_b));
+                            Fp(1) = (vessels[elem_id].beta / A0_b) * (sqrt(A_new) - sqrt(vessels[elem_id].A2));
                             Fp(1) += 0.5 * rho_v * pow(Q_b / A_new, 2);
-                            Fp(1) -= (vessels[elem_id_n_out].beta / A_n0) * (sqrt(A_n) - sqrt(A_n0));
+                            Fp(1) -= (vessels[elem_id_n_out].beta / A_n0) * (sqrt(A_n) - sqrt(vessels[elem_id_n_out].A2));
                             Fp(1) -= 0.5 * rho_v * pow(Q_n / A_n, 2);
 
                             /* Fp(0) += (vessels[elem_id].pext - vessels[elem_id_n_out].pext); */
@@ -2515,14 +2558,20 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
                         {
                             double Aaout_prime = flow_vec[dof_indices_neighbor_out_p[1]];
                             double Aaout = Aaout_prime * L_v * L_v;
-                            double paout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
-                                            (sqrt(Aaout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            // double paout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                            //                 (sqrt(Aaout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            //                (vessels[elem_id].pext - PExt(0));
+                            double paout = ((vessels[elem_id].beta / vessels[elem_id].A0) *
+                                            (sqrt(Aaout) - sqrt(vessels[elem_id].A2))) +
                                            (vessels[elem_id].pext - PExt(0));
 
                             double Avout_prime = flow_vec[dof_indices_p[1]];
                             double Avout = Avout_prime * L_v * L_v;
-                            double pvout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
-                                            (sqrt(Avout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            // double pvout = ((vessels[elem_id].beta / (M_PI * vessels[elem_id].r * vessels[elem_id].r)) *
+                            //                 (sqrt(Avout) - sqrt(M_PI * vessels[elem_id].r * vessels[elem_id].r))) +
+                            //                (vessels[elem_id].pext - PExt(0));
+                            double pvout = ((vessels[elem_id].beta / vessels[elem_id].A0) *
+                                            (sqrt(Avout) - sqrt(vessels[elem_id].A2))) +
                                            (vessels[elem_id].pext - PExt(0));
 
                             double qvein_cur = qVeinMod[vessel_ter_num] +
@@ -2584,8 +2633,8 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
             double A_n = flow_vec
                 [dof_indices_neighbor_p
                      [1]]; // system.current_solution(dof_indices_neighbor_p[1]);
-            double A_n0 = M_PI * pow(vessels[elem_id_n].r, 2);
-            double A0_b = M_PI * pow(vessels[elem_id].r, 2);
+            double A_n0 = vessels[elem_id_n].A0;// M_PI * pow(vessels[elem_id_n].r, 2);
+            double A0_b = vessels[elem_id].A0;// M_PI * pow(vessels[elem_id].r, 2);
 
             double Q_n = flow_vec
                 [dof_indices_neighbor_u
@@ -2593,23 +2642,32 @@ void VesselFlow::compute_residual(const NumericVector<Number> &X,
 
             if (interface_type == 0)
             {
+                // Fp(0) = ((vessels[elem_id].beta / A0_b) /
+                //          ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                //         (sqrt(A_new) - sqrt(A0_b));
+                // Fp(0) -= ((vessels[elem_id_n].beta / A_n0) /
+                //           ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
+                //          (sqrt(A_n) - sqrt(A_n0));
                 Fp(0) = ((vessels[elem_id].beta / A0_b) /
-                         ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
-                        (sqrt(A_new) - sqrt(A0_b));
+                         ((vessels[0].beta / vessels[0].A0))) *
+                        (sqrt(A_new) - sqrt(vessels[elem_id].A1));
                 Fp(0) -= ((vessels[elem_id_n].beta / A_n0) /
-                          ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))))) *
-                         (sqrt(A_n) - sqrt(A_n0));
+                          ((vessels[0].beta /vessels[0].A0))) *
+                         (sqrt(A_n) - sqrt(vessels[elem_id_n].A2));
 
                 Fp(0) += (vessels[elem_id].pext - vessels[elem_id_n].pext) /
-                         ((vessels[0].beta / (M_PI * pow(vessels[0].r, 2))));
+                         ((vessels[0].beta / vessels[0].A0));
             }
 
             else if (interface_type == 1)
             {
-                Fp(0) = (vessels[elem_id].beta / A0_b) * (sqrt(A_new) - sqrt(A0_b));
-                Fp(0) += 0.5 * rho_v * pow(Q_b / A_new, 2);
-                Fp(0) -= (vessels[elem_id_n].beta / A_n0) * (sqrt(A_n) - sqrt(A_n0));
-                Fp(0) -= 0.5 * rho_v * pow(Q_n / A_n, 2);
+                // Fp(0) = (vessels[elem_id].beta / A0_b) * (sqrt(A_new) - sqrt(A0_b));
+                Fp(0) = (vessels[elem_id].beta / A0_b) * (sqrt(A_new) - sqrt(vessels[elem_id].A1));
+                // Fp(0) += 0.5 * rho_v * pow(Q_b / A_new, 2);
+                Fp(0) += 0.5 * rho_v * pow(Q_b / A_new, 2)*(p_0*rho_v);
+                Fp(0) -= (vessels[elem_id_n].beta / A_n0) * (sqrt(A_n) - sqrt(vessels[elem_id_n].A2));
+                // Fp(0) -= 0.5 * rho_v * pow(Q_n / A_n, 2);
+                Fp(0) -= 0.5 * rho_v * pow(Q_n / A_n, 2)*(p_0*rho_v);
 
                 Fp(0) += (vessels[elem_id].pext - vessels[elem_id_n].pext);
             }
@@ -2966,9 +3024,12 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
             double A1_prime = flow_vec[dof_indices_p[0]];
             double Q1 = Q1_prime * sqrt(p_0 / rho_v) * L_v * L_v;
             double A1 = A1_prime * L_v * L_v;
+            // double p1 = vessels[n].pext +
+            //             (vessels[n].beta / (M_PI * vessels[n].r1 * vessels[n].r1)) *
+            //                 (sqrt(A1) - sqrt(M_PI * vessels[n].r1 * vessels[n].r1));
             double p1 = vessels[n].pext +
-                        (vessels[n].beta / (M_PI * vessels[n].r1 * vessels[n].r1)) *
-                            (sqrt(A1) - sqrt(M_PI * vessels[n].r1 * vessels[n].r1));
+                        (vessels[n].beta / vessels[n].A0) *
+                            (sqrt(A1) - sqrt(vessels[n].A1));
             double rad1 = sqrt(A1 / M_PI);
 
             if (fsi_flow == 0)
@@ -3003,9 +3064,12 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
             double A2_prime = flow_vec[dof_indices_p[1]];
             double Q2 = Q2_prime * sqrt(p_0 / rho_v) * L_v * L_v;
             double A2 = A2_prime * L_v * L_v;
+            // double p2 = vessels[n].pext +
+            //             (vessels[n].beta / (M_PI * vessels[n].r2 * vessels[n].r2)) *
+            //                 (sqrt(A2) - sqrt(M_PI * vessels[n].r2 * vessels[n].r2));
             double p2 = vessels[n].pext +
-                        (vessels[n].beta / (M_PI * vessels[n].r2 * vessels[n].r2)) *
-                            (sqrt(A2) - sqrt(M_PI * vessels[n].r2 * vessels[n].r2));
+                        (vessels[n].beta / vessels[n].A0) *
+                            (sqrt(A2) - sqrt(vessels[n].A2));
             double rad2 = sqrt(A2 / M_PI);
 
             if (fsi_flow == 0)
@@ -3036,9 +3100,12 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                 A1v_prime = flow_vec[dof_indices_p[0]];
                 Q1v = Q1v_prime * sqrt(p_0 / rho_v) * L_v * L_v;
                 A1v = A1v_prime * L_v * L_v;
+                // p1v = vessels[n_start].pext +
+                //       (vessels[n_start].beta / (M_PI * vessels[n_start].r1 * vessels[n_start].r1)) *
+                //           (sqrt(A1v) - sqrt(M_PI * vessels[n_start].r1 * vessels[n_start].r1));
                 p1v = vessels[n_start].pext +
-                      (vessels[n_start].beta / (M_PI * vessels[n_start].r1 * vessels[n_start].r1)) *
-                          (sqrt(A1v) - sqrt(M_PI * vessels[n_start].r1 * vessels[n_start].r1));
+                      (vessels[n_start].beta / vessels[n_start].A0) *
+                          (sqrt(A1v) - sqrt(vessels[n_start].A1));
 
                 const Elem *elem_2v = mesh.elem_ptr(n + vessels_in.size());
                 dof_map.dof_indices(elem_2v, dof_indices_u, u_var);
@@ -3048,9 +3115,12 @@ void VesselFlow::writeFlowDataTime(EquationSystems &es, int it, int rank)
                 A2v_prime = flow_vec[dof_indices_p[1]];
                 Q2v = Q2v_prime * sqrt(p_0 / rho_v) * L_v * L_v;
                 A2v = A2v_prime * L_v * L_v;
+                // p2v = vessels[n].pext +
+                //       (vessels[n].beta / (M_PI * vessels[n].r2 * vessels[n].r2)) *
+                //           (sqrt(A2v) - sqrt(M_PI * vessels[n].r2 * vessels[n].r2));
                 p2v = vessels[n].pext +
-                      (vessels[n].beta / (M_PI * vessels[n].r2 * vessels[n].r2)) *
-                          (sqrt(A2v) - sqrt(M_PI * vessels[n].r2 * vessels[n].r2));
+                      (vessels[n].beta / vessels[n].A0) *
+                          (sqrt(A2v) - sqrt(vessels[n].A2));
             }
 
             file_vess << vess_x1 << "," << vess_y1 << ","
@@ -3314,6 +3384,28 @@ double VesselFlow::PInlet(double time_v)
         p_inlet *= 0.13332;
     }
 
+    else if(pin_type == 7)
+    {
+        if (ttime_dim < t_load)
+            p_inlet = p_in_const * sin((2.0 * M_PI * ttime_dim) / time_per);
+        else
+            p_inlet = 0.0;
+    }
+
+    else if (pin_type == 8)
+    {
+        if (ttime_dim < 0.1)
+            p_inlet = 101.776 * (ttime_dim / 0.1);
+        else if ((ttime_dim-0.1) < 0.55)
+            p_inlet = 101.776 - (101.776 - 70.712) * ((ttime_dim-0.1) / 0.55);
+        else if ((ttime_dim-0.1) < 0.7)
+            p_inlet = 70.712 + (132.59 - 70.712) * (1 - exp(-(pow((ttime_dim-0.1) - 0.55, 2)) / 0.004));
+        else
+            p_inlet = 101.776 + (132.53 - 101.776) * (1 - exp(-(pow(0.8 - ((ttime_dim-0.1)), 2)) / 0.0005));
+
+        p_inlet *= 0.013332;
+    }
+
     return p_inlet;
 }
 
@@ -3428,19 +3520,24 @@ double VesselFlow::PDrain(double time_v)
 
 double VesselFlow::AInlet(double time_v)
 {
-    double A0_inlet = M_PI * pow(vessels[0].r1, 2);
+    double A0_inlet = vessels[0].A0;// M_PI * pow(vessels[0].r1, 2);
 
+    // double AIn =
+    //     pow(((PInlet(time_v) * A0_inlet) / vessels[0].beta) + sqrt(A0_inlet), 2);
     double AIn =
-        pow(((PInlet(time_v) * A0_inlet) / vessels[0].beta) + sqrt(A0_inlet), 2);
+        pow(((PInlet(time_v) * A0_inlet) / vessels[0].beta) + sqrt(vessels[0].A1), 2);
 
     return AIn;
 }
 
 double VesselFlow::AOutlet(double time_v, int n)
 {
-    double A0_outlet = M_PI * pow(vessels[n].r2, 2);
+    double A0_outlet = vessels[n].A0;// M_PI * pow(vessels[n].r2, 2);
+    // double AOut = pow(
+    //     ((POutlet(time_v, n) * A0_outlet) / vessels[0].beta) + sqrt(A0_outlet), 2);
+
     double AOut = pow(
-        ((POutlet(time_v, n) * A0_outlet) / vessels[0].beta) + sqrt(A0_outlet), 2);
+        ((POutlet(time_v, n) * A0_outlet) / vessels[0].beta) + sqrt(vessels[n].A2), 2);
 
     return AOut;
 }
