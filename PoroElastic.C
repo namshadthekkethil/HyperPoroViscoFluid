@@ -3740,7 +3740,8 @@ void PoroElastic::update_source_heir(EquationSystems &es, EquationSystems &es_fl
 
       double flow_cur = InputParam::zone_flow[i]; //(Q_cur) / InputParam::zone_volumes[i];
 
-      source_cur += a_const * exp(b_const * (dist_2)) * flow_cur;
+      if(InputParam::ttime < 0.1)
+      source_cur += a_const * exp(b_const * (dist_2)) * sin(2.0*M_PI*InputParam::ttime);// flow_cur;
 
       // cout << "source_cur=" << source_cur << " " << a_const << " " << b_const << " " << dist_2<< " "<< flow_cur << endl;
     }
@@ -3765,7 +3766,7 @@ void PoroElastic::update_source_heir(EquationSystems &es, EquationSystems &es_fl
 
       double flow_cur = (1.0 / InputParam::zone_zetadiff_2[i]) * dzetadn_cur; // InputParam::zone_flow_2[i];// (Q_cur) / InputParam::zone_volumes_2[i];
 
-      // source_cur += a_const * exp(b_const * (dist_2)) * flow_cur;
+      source_cur += a_const * exp(b_const * (dist_2)) * 1000.0 * (InputParam::zone_volumes_2[i] / InputParam::zone_volumes_2[0]); // flow_cur;
 
       Point diff_21 = InputParam::zone_inlet_2[i];
       diff_21.subtract(InputParam::zone_inlet[0]);
@@ -3774,7 +3775,7 @@ void PoroElastic::update_source_heir(EquationSystems &es, EquationSystems &es_fl
       // if (dist_21 > 6.25)
       //   source_cur += 1.0e-6*a_const * exp(b_const * (dist_2)) * flow_cur;// InputParam::zone_beta_daught_2[i]; // * w_mag * 100;
 
-      source_cur += a_const * exp(b_const * (dist_2)) * (1.0/991.0);
+      // source_cur += a_const * exp(b_const * (dist_2)) * (1.0/991.0);
     }
 
     const int dof_index_source_2 = elem->dof_number(system_source_num, 1, 0);
@@ -5019,7 +5020,7 @@ void PoroElastic::assemble_m_heir(
 
         Fm(dof_i) += kappa_0 * (source_cur*(2.37/0.83))*phi[dof_i][qp] * JxW[qp];
         // Fm(dof_i) += kappa_0 * (2.37/1000.0)*phi[dof_i][qp] * JxW[qp];
-        Fm2(dof_i) += kappa_0*(source_cur_2) * phi[dof_i][qp] * JxW[qp];
+        // Fm2(dof_i) += kappa_0*(source_cur_2) * phi[dof_i][qp] * JxW[qp];
 
         // Matrix contributions for the uu and vv couplings.
         for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
@@ -5050,6 +5051,12 @@ void PoroElastic::assemble_m_heir(
 
           // Km2m(dof_i, dof_j) += -source_cur_2 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
           // Km2m2(dof_i, dof_j) += +source_cur_2 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
+
+          Kmm(dof_i, dof_j) += source_cur_2 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
+          Kmm2(dof_i, dof_j) += -source_cur_2 *  phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
+
+          Km2m(dof_i, dof_j) += -source_cur_2 *  phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
+          Km2m2(dof_i, dof_j) += +source_cur_2 *  phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
         }
       }
     } // end of the quadrature point qp-loop

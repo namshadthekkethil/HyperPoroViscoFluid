@@ -177,6 +177,7 @@ public:
 
   static int porous,brinkman;
   static double viscocity;
+  static int flow_solver;
 
   static void read_input();
   static void read_mesh(Mesh &mesh);

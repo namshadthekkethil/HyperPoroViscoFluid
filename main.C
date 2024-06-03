@@ -138,6 +138,7 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
   double end_time = InputParam::time_itr * InputParam::dt;
 
   
+  
 
   // for (unsigned int count = (count_solid-1)*dt_ratio+1; count <= (count_solid)*dt_ratio; count++)
   for (double t_itr = start_time; t_itr <= end_time; t_itr = t_itr + VesselFlow::dt)
@@ -154,7 +155,8 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 
     auto start = high_resolution_clock::now();
 
-    VesselFlow::solve_flow(es);
+    if (InputParam::flow_solver == 1)
+      VesselFlow::solve_flow(es);
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
@@ -182,7 +184,7 @@ void run_time_step_fluid(EquationSystems &es, Mesh &mesh, int rank,
 
     // cout << "count=" << count << " count_per=" << count_per << " t=" << VesselFlow::ttime << " t_per=" << count_per * VesselFlow::dt_v << " tdim=" << count * VesselFlow::dt << " tdim_per=" << VesselFlow::ttime_dim << endl;
 
-    if (((count + 1) % InputParam::write_data_skip == 0))
+    if (InputParam::flow_solver == 1 && ((count + 1) % InputParam::write_data_skip == 0))
     {
       VesselFlow::writeFlowDataTime(es, count, rank);
     }

@@ -84,6 +84,7 @@ int InputParam::vtaubya_size, InputParam::vabyd_size;
 int InputParam::var_v_a;
 
 int InputParam::porous;
+int InputParam::flow_solver;
 
 InputParam::InputParam() {}
 
@@ -149,6 +150,8 @@ void InputParam::read_input()
   alpha_stab = infile("alpha_stab", 0.028);
 
   bead_disp = infile("bead_disp", 0.1);
+
+  flow_solver = infile("flow_solver", 0);
 
   clamp_x_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("clamp_x_bcs"));
