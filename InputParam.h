@@ -103,7 +103,8 @@ public:
   ~InputParam();
 
   static double mesh_scale;
-  static std::string mesh_file_name, fibre_file_name, sheet_file_name, perm_file_name, zone_file_name, zone_file_name_2;
+  static std::string mesh_file_name, fibre_file_name, sheet_file_name, perm_file_name,
+      zone_file_name, zone_file_name_2, zone_file_name_3;
   static unsigned int mesh_centre;
   static unsigned int n_solves,n_total;
   static int write_data_skip, write_data_bound;
@@ -111,7 +112,7 @@ public:
   static double ttime, dt, time_per,omega;
   static int time_itr;
 
-  static int inertia, trans_soln, heirarchy, anis_perm;
+  static int inertia, trans_soln, heirarchy, anis_perm, solve_hyper, second_order_elem;
 
   static int strain_model;
 
@@ -125,8 +126,10 @@ public:
 
   static double kappa_0;
   static vector<int> zone_parent, zone_parent_2;
-  static vector<Point> zone_inlet, zone_inlet_2;
-  static vector<double> zone_volumes, zone_volumes_2;
+  static vector<Point> zone_inlet, zone_inlet_2, zone_inlet_3;
+  static vector<double> zone_volumes, zone_volumes_2, zone_flow, zone_flow_2,
+      zone_zetadiff_2, zone_zeta_2, zone_beta_daught_2;
+  static vector<int> zone_near_elem_2;
 
   static boundary_id_type clamp_x_size, clamp_y_size;
   static DenseVector<boundary_id_type> clamp_x_bcs, clamp_y_bcs;
@@ -174,6 +177,7 @@ public:
 
   static int porous,brinkman;
   static double viscocity;
+  static int flow_solver;
 
   static void read_input();
   static void read_mesh(Mesh &mesh);

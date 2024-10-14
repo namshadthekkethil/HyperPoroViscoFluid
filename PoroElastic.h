@@ -127,7 +127,7 @@ public:
   static double coord_source[4][21990];
   static DenseMatrix<double> porous_data;
   static DenseVector<vector<double>> source_data;
-  static int read_source,read_tree,read_permeability;
+  static int read_source,read_tree,read_permeability, comp_size;
   static vector<int> near_vess;
   static vector<double> source_vess;
   static double tau_vispe;
@@ -185,6 +185,14 @@ public:
                               const std::string &libmesh_dbg_var(system_name));
   static void assemble_porous_p1p0(EquationSystems &es,
                                    const std::string &libmesh_dbg_var(system_name));
+  static void assemble_porous_p2p1(EquationSystems &es,
+                                   const std::string &libmesh_dbg_var(system_name));
+  static void assemble_porous_p2p1_2(EquationSystems &es,
+                                   const std::string &libmesh_dbg_var(system_name));
+  static void assemble_porous_all(EquationSystems &es,
+                                     const std::string &libmesh_dbg_var(system_name));
+  static void assemble_ppore_heir(EquationSystems &es,
+                                  const std::string &libmesh_dbg_var(system_name));
   static void initialise_K(EquationSystems &es);
   static void update_poroelastic(EquationSystems &es);
   static void initialise_poroelastic(EquationSystems &es);
@@ -217,6 +225,12 @@ public:
   static void update_source_heir(EquationSystems &es, EquationSystems &es_fluid);
   static void assemble_m_heir(
       EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
+  static void update_ppore_heir(EquationSystems &es);
+  static void assemble_darcy_heir(
+      EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
+  static void assemble_m_comp(
+      EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
+  static void compute_comp_error(EquationSystems &es);
 };
 
 #endif

@@ -1,8 +1,12 @@
 {
     "files.associations": {
-        "*.C": "c",
-        "type_traits": "cpp",
-        "ostream": "cpp",
-        "iosfwd": "cpp"
+        "PoroElastic.C": "cpp",
+        "InputParam.C": "cpp",
+        "BoundaryCond.C": "cpp",
+        "main.C": "cpp",
+        "VesselFlow.C": "cpp",
+        "Admittance.C": "cpp",
+        "HyperElasticModel.C": "cpp",
+        "PostProcess.C": "cpp"
     }
 }

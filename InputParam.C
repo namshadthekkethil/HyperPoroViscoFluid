@@ -5,14 +5,15 @@ using namespace std;
 
 double InputParam::mesh_scale;
 std::string InputParam::mesh_file_name, InputParam::fibre_file_name, InputParam::perm_file_name,
-    InputParam::sheet_file_name, InputParam::zone_file_name, InputParam::zone_file_name_2;
+    InputParam::sheet_file_name, InputParam::zone_file_name, InputParam::zone_file_name_2, InputParam::zone_file_name_3;
 unsigned int InputParam::mesh_centre;
-unsigned int InputParam::n_solves,InputParam::n_total;
+unsigned int InputParam::n_solves, InputParam::n_total;
 int InputParam::write_data_skip, InputParam::write_data_bound;
 unsigned int InputParam::output_terminal;
-double InputParam::ttime, InputParam::dt,InputParam::time_per,InputParam::omega;
+double InputParam::ttime, InputParam::dt, InputParam::time_per, InputParam::omega;
 int InputParam::time_itr;
-int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::heirarchy, InputParam::anis_perm;
+int InputParam::inertia, InputParam::trans_soln, InputParam::brinkman, InputParam::heirarchy, InputParam::anis_perm,
+    InputParam::solve_hyper, InputParam::second_order_elem;
 
 double InputParam::nonlinear_abs_tol, InputParam::nonlinear_rel_tol;
 unsigned int InputParam::nonlinear_max_its;
@@ -31,8 +32,11 @@ double InputParam::kappa_0;
 double InputParam::viscocity;
 
 vector<int> InputParam::zone_parent, InputParam::zone_parent_2;
-vector<Point> InputParam::zone_inlet, InputParam::zone_inlet_2;
-vector<double> InputParam::zone_volumes, InputParam::zone_volumes_2;
+vector<Point> InputParam::zone_inlet, InputParam::zone_inlet_2, InputParam::zone_inlet_3;
+vector<double> InputParam::zone_volumes, InputParam::zone_volumes_2, InputParam::zone_flow, InputParam::zone_flow_2,
+    InputParam::zone_zetadiff_2, InputParam::zone_zeta_2, InputParam::zone_beta_daught_2;
+
+vector<int> InputParam::zone_near_elem_2;
 
 boundary_id_type InputParam::clamp_x_size,
     InputParam::clamp_y_size;
@@ -66,7 +70,7 @@ double InputParam::beta_s;
 int InputParam::active_tension;
 double InputParam::Ta_max;
 
-double InputParam::V_bead, InputParam::a_bead,InputParam::bead_disp;
+double InputParam::V_bead, InputParam::a_bead, InputParam::bead_disp;
 
 double InputParam::alpha_fib;
 
@@ -80,12 +84,14 @@ int InputParam::vtaubya_size, InputParam::vabyd_size;
 int InputParam::var_v_a;
 
 int InputParam::porous;
+int InputParam::flow_solver;
 
 InputParam::InputParam() {}
 
 InputParam::~InputParam() {}
 
-void InputParam::read_input() {
+void InputParam::read_input()
+{
   GetPot infile1("input.in");
   std::string input_file_name = infile1("input_file_name", "input_LV.in");
   GetPot infile(input_file_name);
@@ -102,7 +108,9 @@ void InputParam::read_input() {
 
   heirarchy = infile("heirarchy", 0);
 
-  anis_perm = infile("anis_perm",0);
+  second_order_elem = infile("second_order_elem", 0);
+
+  anis_perm = infile("anis_perm", 0);
   perm_file_name = infile("perm_file_name", "frame_perm.e");
 
   time_per = infile("time_per", 0.8);
@@ -114,6 +122,8 @@ void InputParam::read_input() {
 
   inertia = infile("inertia", 0);
   trans_soln = infile("trans_soln", 1);
+
+  solve_hyper = infile("solve_hyper", 1);
 
   strain_model = infile("strain_model", 1);
 
@@ -141,22 +151,28 @@ void InputParam::read_input() {
 
   bead_disp = infile("bead_disp", 0.1);
 
+  flow_solver = infile("flow_solver", 0);
+
   clamp_x_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("clamp_x_bcs"));
   clamp_y_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("clamp_y_bcs"));
 
-  if (clamp_x_size > 0) {
+  if (clamp_x_size > 0)
+  {
     clamp_x_bcs.resize(clamp_x_size);
-    for (boundary_id_type nbc = 0; nbc < clamp_x_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < clamp_x_size; nbc++)
+    {
       clamp_x_bcs(nbc) =
           cast_int<boundary_id_type>(infile("clamp_x_bcs", 1, nbc));
     }
   }
 
-  if (clamp_y_size > 0) {
+  if (clamp_y_size > 0)
+  {
     clamp_y_bcs.resize(clamp_y_size);
-    for (boundary_id_type nbc = 0; nbc < clamp_y_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < clamp_y_size; nbc++)
+    {
       clamp_y_bcs(nbc) =
           cast_int<boundary_id_type>(infile("clamp_y_bcs", 1, nbc));
     }
@@ -165,9 +181,11 @@ void InputParam::read_input() {
 #if (MESH_DIMENSION == 3)
   clamp_z_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("clamp_z_bcs"));
-  if (clamp_z_size > 0) {
+  if (clamp_z_size > 0)
+  {
     clamp_z_bcs.resize(clamp_z_size);
-    for (boundary_id_type nbc = 0; nbc < clamp_z_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < clamp_z_size; nbc++)
+    {
       clamp_z_bcs(nbc) =
           cast_int<boundary_id_type>(infile("clamp_z_bcs", 1, nbc));
     }
@@ -183,19 +201,23 @@ void InputParam::read_input() {
   force_y_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("force_y_bcs"));
 
-  if (force_x_size > 0) {
+  if (force_x_size > 0)
+  {
     force_x_bcs.resize(force_x_size);
     force_x_values.resize(force_x_size);
-    for (boundary_id_type nbc = 0; nbc < force_x_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < force_x_size; nbc++)
+    {
       force_x_bcs(nbc) = infile("force_x_bcs", 1, nbc);
       force_x_values(nbc) = infile("force_x_values", 0.0, nbc);
     }
   }
 
-  if (force_y_size > 0) {
+  if (force_y_size > 0)
+  {
     force_y_bcs.resize(force_y_size);
     force_y_values.resize(force_x_size);
-    for (boundary_id_type nbc = 0; nbc < force_y_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < force_y_size; nbc++)
+    {
       force_y_bcs(nbc) = infile("force_y_bcs", 1, nbc);
       force_y_values(nbc) = infile("force_y_values", 0.0, nbc);
     }
@@ -204,10 +226,12 @@ void InputParam::read_input() {
 #if (MESH_DIMENSION == 3)
   force_z_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("force_z_bcs"));
-  if (force_z_size > 0) {
+  if (force_z_size > 0)
+  {
     force_z_bcs.resize(force_z_size);
     force_z_values.resize(force_x_size);
-    for (boundary_id_type nbc = 0; nbc < force_z_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < force_z_size; nbc++)
+    {
       force_z_bcs(nbc) = infile("force_z_bcs", 1, nbc);
       force_z_values(nbc) = infile("force_z_values", 0.0, nbc);
     }
@@ -217,10 +241,12 @@ void InputParam::read_input() {
   pressure_size =
       cast_int<boundary_id_type>(infile.vector_variable_size("pressure_bcs"));
 
-  if (pressure_size > 0) {
+  if (pressure_size > 0)
+  {
     pressure_bcs.resize(pressure_size);
     pressure_values.resize(pressure_size);
-    for (boundary_id_type nbc = 0; nbc < pressure_size; nbc++) {
+    for (boundary_id_type nbc = 0; nbc < pressure_size; nbc++)
+    {
       pressure_bcs(nbc) = infile("pressure_bcs", 1, nbc);
       pressure_values(nbc) = infile("pressure_values", 0.0, nbc);
     }
@@ -251,16 +277,20 @@ void InputParam::read_input() {
 
   vabyd_size = cast_int<double>(infile.vector_variable_size("vabyd"));
 
-  if (vtaubya_size > 0) {
+  if (vtaubya_size > 0)
+  {
     Vtaubya.resize(vtaubya_size);
-    for (int nbc = 0; nbc < vtaubya_size; nbc++) {
+    for (int nbc = 0; nbc < vtaubya_size; nbc++)
+    {
       Vtaubya(nbc) = infile("vtaubya", 1.0, nbc);
     }
   }
 
-  if (vabyd_size > 0) {
+  if (vabyd_size > 0)
+  {
     VabyD.resize(vabyd_size);
-    for (int nbc = 0; nbc < vabyd_size; nbc++) {
+    for (int nbc = 0; nbc < vabyd_size; nbc++)
+    {
       VabyD(nbc) = infile("vabyd", 1.0, nbc);
     }
   }
@@ -275,6 +305,7 @@ void InputParam::read_input() {
   {
     zone_file_name = infile("zone_file_name", "zone_data.dat");
     zone_file_name_2 = infile("zone_file_name_2", "zone_data_2.dat");
+    zone_file_name_3 = infile("zone_file_name_3", "zone_data_3.dat");
 
     read_zone_data();
   }
@@ -290,38 +321,48 @@ void InputParam::read_zone_data()
   int zone_parent_cur = 0;
   Point zone_inlet_cur;
   double zone_volumes_cur = 0.0;
+  double zone_flow_cur = 0.0;
   while (!file_zone.eof())
   {
-    file_zone >> zone_parent_cur >> zone_inlet_cur(0) >> zone_inlet_cur(1);
-    if(MESH_DIMENSION == 3)
+    file_zone >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    if (MESH_DIMENSION == 3)
       file_zone >> zone_inlet_cur(2);
 
-    file_zone >> zone_volumes_cur;
+    file_zone >> zone_volumes_cur >> zone_parent_cur >> zone_flow_cur;
 
     zone_inlet_cur *= mesh_scale;
     zone_volumes_cur *= mesh_scale * mesh_scale * mesh_scale;
 
-    if (file_zone.eof()) break;
+    if (file_zone.eof())
+      break;
 
     else
     {
       zone_parent.push_back(zone_parent_cur);
       zone_inlet.push_back(zone_inlet_cur);
       zone_volumes.push_back(zone_volumes_cur);
+      zone_flow.push_back(zone_flow_cur);
     }
   }
 
   file_zone.close();
+
+  double zetadiff_cur = 0.0;
+  double zeta_cur = 0.0;
+
+  int near_elem = 0;
+  double beta_daught = 1.0;
 
   ifstream file_zone_2;
   file_zone_2.open(zone_file_name_2);
 
   while (!file_zone_2.eof())
   {
-    file_zone_2 >> zone_parent_cur >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    file_zone_2 >> zone_inlet_cur(0) >> zone_inlet_cur(1);
     if (MESH_DIMENSION == 3)
       file_zone_2 >> zone_inlet_cur(2);
-    file_zone_2 >> zone_volumes_cur;
+    file_zone_2 >> zone_volumes_cur >> zone_parent_cur >> zone_flow_cur >> zetadiff_cur >> zeta_cur >>
+        near_elem >> beta_daught;
 
     zone_inlet_cur *= mesh_scale;
     zone_volumes_cur *= mesh_scale * mesh_scale * mesh_scale;
@@ -334,25 +375,50 @@ void InputParam::read_zone_data()
       zone_parent_2.push_back(zone_parent_cur);
       zone_inlet_2.push_back(zone_inlet_cur);
       zone_volumes_2.push_back(zone_volumes_cur);
+      zone_flow_2.push_back(zone_flow_cur);
+      zone_zetadiff_2.push_back(zetadiff_cur);
+      zone_zeta_2.push_back(zeta_cur);
+      zone_near_elem_2.push_back(near_elem);
+      zone_beta_daught_2.push_back(beta_daught);
     }
   }
 
   file_zone_2.close();
 
-  // for(int i=0;i<zone_parent.size();i++)
-  // {
-  //   cout<<zone_inlet[i]<<endl;
-  // }
+  ifstream file_zone_3;
+  file_zone_3.open(zone_file_name_3);
+
+  while (!file_zone_3.eof())
+  {
+    file_zone_3 >> zone_inlet_cur(0) >> zone_inlet_cur(1);
+    if (MESH_DIMENSION == 3)
+      file_zone_3 >> zone_inlet_cur(2);
+
+
+    zone_inlet_cur *= mesh_scale;
+
+    if (file_zone_3.eof())
+      break;
+
+    else
+    {
+      zone_inlet_3.push_back(zone_inlet_cur);
+    }
+  }
+
+  file_zone_3.close();
 
 }
 
-void InputParam::read_mesh(Mesh &mesh) {
+void InputParam::read_mesh(Mesh &mesh)
+{
   mesh.allow_renumbering(false);
   mesh.read(mesh_file_name, NULL);
   MeshTools::Modification::scale(mesh, mesh_scale);
 
-  if (mesh_centre == 1) {
-    //MeshTools::BoundingBox bbox = MeshTools::bounding_box(mesh);
+  if (mesh_centre == 1)
+  {
+    // MeshTools::BoundingBox bbox = MeshTools::bounding_box(mesh);
 
     BoundingBox bbox = MeshTools::create_bounding_box(mesh);
 
@@ -368,7 +434,7 @@ void InputParam::read_mesh(Mesh &mesh) {
   }
 }
 
-void InputParam::read_mesh_perm(ExodusII_IO & exo_io, Mesh &mesh)
+void InputParam::read_mesh_perm(ExodusII_IO &exo_io, Mesh &mesh)
 {
   mesh.allow_renumbering(false);
 
