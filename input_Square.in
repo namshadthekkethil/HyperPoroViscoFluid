@@ -1,5 +1,5 @@
 mesh_file_name =  Square_mesh.e
-perm_file_name = frame_perm.e
+perm_file_name = frame_perm_comp_3.e
 zone_file_name = zone_data.dat
 zone_file_name_2 = zone_data_2.dat
 zone_file_name_3 = zone_data_3.dat
@@ -7,6 +7,8 @@ zone_file_name_3 = zone_data_3.dat
 mesh_scale = 0.1 // 1.0 //0.1
 mesh_centre = 1
 mesh_dim = 3 //2
+
+comp_size = 3
 
 second_order_elem = 0 // 0 for first order 1 for second order
 
@@ -25,7 +27,7 @@ inertia = 1 //2 //2
 damping_on = 0 //1
 damping = 0 //4.0087
 
-incomp_type = 0 //1
+incomp_type = 0 // 1
 
 trans_soln = 1
 darcy_solver = 0
@@ -34,7 +36,7 @@ porous = 1
 
 heirarchy = 1
 
-anis_perm = 1
+anis_perm = 0 // 1
 
 solve_hyper = 0
 
@@ -110,8 +112,8 @@ source_prssr = 2.7e4
 sink_const = 0.0 // 3.0e-6
 sink_prssr = 0.0 // 1.3e4
 biot_modulus = 2.18e6
-kappa_0 = 1.0e6 // 1.0e9 // 0.01 // 0.01 //  1.0e6 // 1.0e10 //0.1
-permeability = 1.0 // 1.0e7 //1.0e-6 // 1.0 // 1.0e-4 // 2.0e-6
+kappa_0 = 1.0e8 // 1.0e4 // 1.0e6 // 1.0e9 // 0.01 // 0.01 //  1.0e6 // 1.0e10 //0.1
+permeability = 10.0 // 5.0 // 1.0 // 1.0e-8 // 1.0 // 1.0e7 //1.0e-6 // 1.0 // 1.0e-4 // 2.0e-6
 
 q1 = 0.022e4
 q2 = 1.009e4

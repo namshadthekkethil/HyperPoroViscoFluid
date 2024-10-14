@@ -5,6 +5,8 @@
         "BoundaryCond.C": "cpp",
         "main.C": "cpp",
         "VesselFlow.C": "cpp",
-        "Admittance.C": "cpp"
+        "Admittance.C": "cpp",
+        "HyperElasticModel.C": "cpp",
+        "PostProcess.C": "cpp"
     }
 }
