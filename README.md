@@ -1,0 +1,1 @@
+HyperPoroViscoFluid is a C/C++ based numerical simulation code designed to model hyperelastic, poroelastic, and viscoelastic fluid dynamics coupled with fluid flow. This project focuses on simulating complex soft tissue mechanics, particularly for biomedical applications, such as cell cytoplasm and cardiac tissues.
