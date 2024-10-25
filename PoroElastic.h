@@ -127,10 +127,10 @@ public:
   static double coord_source[4][21990];
   static DenseMatrix<double> porous_data;
   static DenseVector<vector<double>> source_data;
-  static int read_source,read_tree,read_permeability, comp_size;
+  static int read_source,read_tree,read_permeability, comp_size, homegen;
   static vector<int> near_vess;
   static vector<double> source_vess;
-  static double tau_vispe;
+  static double tau_vispe, beta_const;
 
 
   static void read_input(int rank);
@@ -229,6 +229,8 @@ public:
   static void assemble_darcy_heir(
       EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
   static void assemble_m_comp(
+      EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
+  static void assemble_q_comp(
       EquationSystems &es, const std::string &libmesh_dbg_var(system_name));
   static void compute_comp_error(EquationSystems &es);
 };

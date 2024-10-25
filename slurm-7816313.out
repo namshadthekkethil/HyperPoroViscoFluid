@@ -1,0 +1,636 @@
+argc = 202
+input_Square.in
+mesh_file_name=Square_mesh.e
+perm_file_name=frame_perm.e
+zone_file_name=zone_data.dat
+zone_file_name_2=zone_data_2.dat
+zone_file_name_3=zone_data_3.dat
+mesh_scale=0.1
+//
+1.0
+//0.1
+mesh_centre=1
+mesh_dim=3
+//2
+comp_size=2
+second_order_elem=0
+//
+0
+for
+first
+order
+1
+for
+second
+order
+write_data_skip=2
+//
+20
+//
+5
+//
+50
+write_data_bound=10
+flow_solver=0
+dt=0.001
+//
+0.001
+//
+0.001
+//
+0.000976562
+//
+0.001
+//0.000125
+//
+0.0002//
+0.000125
+//0.001
+//0.001
+output_terminal=1
+rho_s=1.0
+//1.0e-9
+//1.0
+inertia=1
+//2
+//2
+damping_on=0
+//1
+damping=0
+//4.0087
+incomp_type=0
+//
+1
+trans_soln=1
+darcy_solver=0
+porous=1
+heirarchy=1
+anis_perm=0
+//
+1
+solve_hyper=0
+approx_order=FIRST
+fe_family=LAGRANGE
+active_tension=1
+//2
+Jm23_on=1
+jphi_implicit=1
+pressure_current=1
+prssr_loading=0
+alpha_stab=0.002
+//
+0.02
+//
+0.028
+//0.0
+//0.01
+//0.01
+//0.01
+//0.00003
+//0.028
+Ta_max=8.426e5
+beta_s=1.0e20
+//193.8
+//310.0
+//1355.34
+//310.0e2
+//1355.34e6
+//1.0e5
+//1.1e4
+pressure_sys=-1.346e5
+//
+0.0
+t_load=0.5
+//0.4
+t_end_diastole=0.5
+//500.0
+//2.0
+//0.5
+nonlinear_abs_tol=1.0e1
+//
+1.0e0
+//1.e-12
+nonlinear_rel_tol=1.e-6
+nonlinear_max_its=100
+n_solves=819
+//100
+//250
+//250
+//
+5000
+n_total=800
+//3276
+time_per=0.8
+aHO=2244.87
+bHO=1.6215
+afHO=2.4267e4
+//
+10000.0
+//2.4267e4
+bfHO=1.8268
+asHO=5562.38
+bsHO=0.7746
+afsHO=3905.16
+bfsHO=1.695
+C_mod=1.0e5
+//1.0e5
+//2.0e4
+bf=1.0
+//8.0
+//1.0
+bt=1.0
+//2.0
+//1.0
+bfs=1.0
+//4.0
+//1.0
+vtaubya=1.0e2
+vabyd=1.0e-1
+torsion_bc=0
+strain_model=2
+//2
+pmat_type=1
+epsilon=0.001
+ppore_penalty_on=1
+phi_0=0.06
+phi_crit=0.005
+//0.001
+source_const=3.0e-6
+source_prssr=2.7e4
+sink_const=0.0
+//
+3.0e-6
+sink_prssr=0.0
+//
+1.3e4
+biot_modulus=2.18e6
+kappa_0=1.0e8
+//
+1.0e4
+//
+1.0e6
+//
+1.0e9
+//
+0.01
+//
+0.01
+//
+1.0e6
+//
+1.0e10
+//0.1
+permeability=30.0
+//
+5.0
+//
+1.0
+//
+1.0e-8
+//
+1.0
+//
+1.0e7
+//1.0e-6
+//
+1.0
+//
+1.0e-4
+//
+2.0e-6
+q1=0.022e4
+q2=1.009e4
+q3=80.0
+
+argc = 202
+input_Square.in
+mesh_file_name=Square_mesh.e
+perm_file_name=frame_perm.e
+zone_file_name=zone_data.dat
+zone_file_name_2=zone_data_2.dat
+zone_file_name_3=zone_data_3.dat
+mesh_scale=0.1
+//
+1.0
+//0.1
+mesh_centre=1
+mesh_dim=3
+//2
+comp_size=2
+second_order_elem=0
+//
+0
+for
+first
+order
+1
+for
+second
+order
+write_data_skip=2
+//
+20
+//
+5
+//
+50
+write_data_bound=10
+flow_solver=0
+dt=0.001
+//
+0.001
+//
+0.001
+//
+0.000976562
+//
+0.001
+//0.000125
+//
+0.0002//
+0.000125
+//0.001
+//0.001
+output_terminal=1
+rho_s=1.0
+//1.0e-9
+//1.0
+inertia=1
+//2
+//2
+damping_on=0
+//1
+damping=0
+//4.0087
+incomp_type=0
+//
+1
+trans_soln=1
+darcy_solver=0
+porous=1
+heirarchy=1
+anis_perm=0
+//
+1
+solve_hyper=0
+approx_order=FIRST
+fe_family=LAGRANGE
+active_tension=1
+//2
+Jm23_on=1
+jphi_implicit=1
+pressure_current=1
+prssr_loading=0
+alpha_stab=0.002
+//
+0.02
+//
+0.028
+//0.0
+//0.01
+//0.01
+//0.01
+//0.00003
+//0.028
+Ta_max=8.426e5
+beta_s=1.0e20
+//193.8
+//310.0
+//1355.34
+//310.0e2
+//1355.34e6
+//1.0e5
+//1.1e4
+pressure_sys=-1.346e5
+//
+0.0
+t_load=0.5
+//0.4
+t_end_diastole=0.5
+//500.0
+//2.0
+//0.5
+nonlinear_abs_tol=1.0e1
+//
+1.0e0
+//1.e-12
+nonlinear_rel_tol=1.e-6
+nonlinear_max_its=100
+n_solves=819
+//100
+//250
+//250
+//
+5000
+n_total=800
+//3276
+time_per=0.8
+aHO=2244.87
+bHO=1.6215
+afHO=2.4267e4
+//
+10000.0
+//2.4267e4
+bfHO=1.8268
+asHO=5562.38
+bsHO=0.7746
+afsHO=3905.16
+bfsHO=1.695
+C_mod=1.0e5
+//1.0e5
+//2.0e4
+bf=1.0
+//8.0
+//1.0
+bt=1.0
+//2.0
+//1.0
+bfs=1.0
+//4.0
+//1.0
+vtaubya=1.0e2
+vabyd=1.0e-1
+torsion_bc=0
+strain_model=2
+//2
+pmat_type=1
+epsilon=0.001
+ppore_penalty_on=1
+phi_0=0.06
+phi_crit=0.005
+//0.001
+source_const=3.0e-6
+source_prssr=2.7e4
+sink_const=0.0
+//
+3.0e-6
+sink_prssr=0.0
+//
+1.3e4
+biot_modulus=2.18e6
+kappa_0=1.0e8
+//
+1.0e4
+//
+1.0e6
+//
+1.0e9
+//
+0.01
+//
+0.01
+//
+1.0e6
+//
+1.0e10
+//0.1
+permeability=30.0
+//
+5.0
+//
+1.0
+//
+1.0e-8
+//
+1.0
+//
+1.0e7
+//1.0e-6
+//
+1.0
+//
+1.0e-4
+//
+2.0e-6
+q1=0.022e4
+q2=1.009e4
+q3=80.0
+
+READ VESSEL DATA
+alpha=1.25 beta=0.737106 gamma=0.100531
+before impedance
+t=4096 (1.72485e-05,0) (-1.72485e-05,0) (-1.72485e-05,0) (1.72485e-05,0)
+AFTER FFT SHIFT
+t=4096 (0.000152244,-1.21271e-05) (8.277e-09,-4.57993e-09) (8.277e-09,-4.57993e-09) (0.000154521,-1.24993e-05)
+AFTER BITREVERSE
+t=4096 (1.72852e-05,1.47523e-06) (-1.72172e-05,8.08774e-07) (-1.72172e-05,8.08774e-07) (1.72824e-05,1.45124e-06)
+le1=0
+l=0 j=0 i=0 Z=(1.72485e-05,0) ip=1 Zip=(0.000152244,-1.21271e-05)
+le1=1
+l=1 j=0 i=0 Z=(0.000169492,-1.21271e-05) ip=2 Zip=(0.000163896,-2.34559e-05)
+le1=3
+l=2 j=0 i=0 Z=(0.000333388,-3.5583e-05) ip=4 Zip=(0.000325802,-5.57207e-05)
+le1=7
+l=3 j=0 i=0 Z=(0.00065919,-9.13037e-05) ip=8 Zip=(0.00065558,-9.43104e-05)
+le1=15
+l=4 j=0 i=0 Z=(0.00131477,-0.000185614) ip=16 Zip=(0.00131746,-0.00023009)
+le1=31
+l=5 j=0 i=0 Z=(0.00263223,-0.000415704) ip=32 Zip=(0.00257175,-0.000420406)
+le1=63
+l=6 j=0 i=0 Z=(0.00520398,-0.000836109) ip=64 Zip=(0.00514475,-0.000843938)
+le1=127
+l=7 j=0 i=0 Z=(0.0103487,-0.00168005) ip=128 Zip=(0.0102817,-0.0016828)
+le1=255
+l=8 j=0 i=0 Z=(0.0206304,-0.00336285) ip=256 Zip=(0.0205652,-0.00336208)
+le1=511
+l=9 j=0 i=0 Z=(0.0411956,-0.00672493) ip=512 Zip=(0.0411284,-0.00672014)
+le1=1023
+l=10 j=0 i=0 Z=(0.082324,-0.0134451) ip=1024 Zip=(0.0822561,-0.013439)
+le1=2047
+l=11 j=0 i=0 Z=(0.16458,-0.026884) ip=2048 Zip=(0.164513,-0.0268773)
+le1=4095
+l=12 j=0 i=0 Z=(0.329093,-0.0537613) ip=4096 Zip=(0.329025,-0.0537541)
+le1=0
+l=0 j=0 i=0 Z=(-1.72485e-05,0) ip=1 Zip=(8.277e-09,-4.57993e-09)
+le1=1
+l=1 j=0 i=0 Z=(-1.72403e-05,-4.57993e-09) ip=2 Zip=(-1.71707e-05,8.62467e-07)
+le1=3
+l=2 j=0 i=0 Z=(-3.44109e-05,8.57887e-07) ip=4 Zip=(-3.44922e-05,1.65813e-06)
+le1=7
+l=3 j=0 i=0 Z=(-6.89032e-05,2.51602e-06) ip=8 Zip=(-6.84603e-05,2.85154e-06)
+le1=15
+l=4 j=0 i=0 Z=(-0.000137363,5.36756e-06) ip=16 Zip=(-0.000137397,1.09796e-05)
+le1=31
+l=5 j=0 i=0 Z=(-0.000274761,1.63472e-05) ip=32 Zip=(-0.000270646,1.17826e-05)
+le1=63
+l=6 j=0 i=0 Z=(-0.000545407,2.81298e-05) ip=64 Zip=(-0.000546552,2.28082e-05)
+le1=127
+l=7 j=0 i=0 Z=(-0.00109196,5.0938e-05) ip=128 Zip=(-0.00109675,4.60115e-05)
+le1=255
+l=8 j=0 i=0 Z=(-0.00218871,9.69494e-05) ip=256 Zip=(-0.00219659,9.39382e-05)
+le1=511
+l=9 j=0 i=0 Z=(-0.0043853,0.000190888) ip=512 Zip=(-0.0043939,0.000189998)
+le1=1023
+l=10 j=0 i=0 Z=(-0.0087792,0.000380885) ip=1024 Zip=(-0.00878779,0.000380863)
+le1=2047
+l=11 j=0 i=0 Z=(-0.017567,0.000761748) ip=2048 Zip=(-0.0175756,0.000762147)
+le1=4095
+l=12 j=0 i=0 Z=(-0.0351426,0.0015239) ip=4096 Zip=(-0.0351512,0.00152451)
+le1=0
+l=0 j=0 i=0 Z=(-1.72485e-05,0) ip=1 Zip=(8.277e-09,-4.57993e-09)
+le1=1
+l=1 j=0 i=0 Z=(-1.72403e-05,-4.57993e-09) ip=2 Zip=(-1.71707e-05,8.62467e-07)
+le1=3
+l=2 j=0 i=0 Z=(-3.44109e-05,8.57887e-07) ip=4 Zip=(-3.44922e-05,1.65813e-06)
+le1=7
+l=3 j=0 i=0 Z=(-6.89032e-05,2.51602e-06) ip=8 Zip=(-6.84603e-05,2.85154e-06)
+le1=15
+l=4 j=0 i=0 Z=(-0.000137363,5.36756e-06) ip=16 Zip=(-0.000137397,1.09796e-05)
+le1=31
+l=5 j=0 i=0 Z=(-0.000274761,1.63472e-05) ip=32 Zip=(-0.000270646,1.17826e-05)
+le1=63
+l=6 j=0 i=0 Z=(-0.000545407,2.81298e-05) ip=64 Zip=(-0.000546552,2.28082e-05)
+le1=127
+l=7 j=0 i=0 Z=(-0.00109196,5.0938e-05) ip=128 Zip=(-0.00109675,4.60115e-05)
+le1=255
+l=8 j=0 i=0 Z=(-0.00218871,9.69494e-05) ip=256 Zip=(-0.00219659,9.39382e-05)
+le1=511
+l=9 j=0 i=0 Z=(-0.0043853,0.000190888) ip=512 Zip=(-0.0043939,0.000189998)
+le1=1023
+l=10 j=0 i=0 Z=(-0.0087792,0.000380885) ip=1024 Zip=(-0.00878779,0.000380863)
+le1=2047
+l=11 j=0 i=0 Z=(-0.017567,0.000761748) ip=2048 Zip=(-0.0175756,0.000762147)
+le1=4095
+l=12 j=0 i=0 Z=(-0.0351426,0.0015239) ip=4096 Zip=(-0.0351512,0.00152451)
+le1=0
+l=0 j=0 i=0 Z=(1.72485e-05,0) ip=1 Zip=(0.000154521,-1.24993e-05)
+le1=1
+l=1 j=0 i=0 Z=(0.00017177,-1.24993e-05) ip=2 Zip=(0.000168464,-1.76577e-05)
+le1=3
+l=2 j=0 i=0 Z=(0.000340233,-3.0157e-05) ip=4 Zip=(0.000334962,-4.3738e-05)
+le1=7
+l=3 j=0 i=0 Z=(0.000675196,-7.3895e-05) ip=8 Zip=(0.000643118,-0.00010871)
+le1=15
+l=4 j=0 i=0 Z=(0.00131831,-0.000182605) ip=16 Zip=(0.00131831,-0.000230981)
+le1=31
+l=5 j=0 i=0 Z=(0.00263662,-0.000413586) ip=32 Zip=(0.00257433,-0.000423053)
+le1=63
+l=6 j=0 i=0 Z=(0.00521095,-0.000836638) ip=64 Zip=(0.00515085,-0.000845991)
+le1=127
+l=7 j=0 i=0 Z=(0.0103618,-0.00168263) ip=128 Zip=(0.0102931,-0.00168601)
+le1=255
+l=8 j=0 i=0 Z=(0.0206548,-0.00336864) ip=256 Zip=(0.0205884,-0.00336722)
+le1=511
+l=9 j=0 i=0 Z=(0.0412432,-0.00673587) ip=512 Zip=(0.0411749,-0.00673093)
+le1=1023
+l=10 j=0 i=0 Z=(0.0824181,-0.0134668) ip=1024 Zip=(0.082349,-0.0134607)
+le1=2047
+l=11 j=0 i=0 Z=(0.164767,-0.0269275) ip=2048 Zip=(0.164699,-0.0269205)
+le1=4095
+l=12 j=0 i=0 Z=(0.329466,-0.053848) ip=4096 Zip=(0.329397,-0.0538406)
+AFTER IFFT
+t=4096 (6.74432e-05,-7.19677e-06) (8.59887e-06,-6.10562e-07) (8.59887e-06,-6.10562e-07) (6.85991e-05,-7.3706e-06)
+EVERYTHING IS FINE
+t=08.03367e-05 -8.58078e-06 -8.58078e-06 8.04276e-05
+after impedance
+0 2.04732 -0.218674 -0.218674 2.04963
+1 -0.31894 -0.00567186 -0.00567186 -0.314582
+10 -0.0762126 0.0014234 0.0014234 -0.0690375
+1000 0.000258071 2.6813e-05 2.6813e-05 0.000262695
+ Mesh Information:
+  elem_dimensions()={1}
+  spatial_dimension()=1
+  n_nodes()=111397
+    n_local_nodes()=111397
+  n_elem()=52283
+    n_local_elem()=52283
+    n_active_elem()=52283
+  n_subdomains()=1
+  n_partitions()=1
+  n_processors()=1
+  n_threads()=1
+  processor_id()=0
+
+         mesh bounding box lower = (-5 , -5 , -5) cm
+         mesh bounding box upper = (5 , 5 , 5) cm
+         mesh bounding box lower = (-5 , -5 , -5) cm
+         mesh bounding box upper = (5 , 5 , 5) cm
+ Mesh Information:
+  elem_dimensions()={3}
+  spatial_dimension()=3
+  n_nodes()=6957
+    n_local_nodes()=6957
+  n_elem()=32578
+    n_local_elem()=32578
+    n_active_elem()=32578
+  n_subdomains()=1
+  n_partitions()=1
+  n_processors()=1
+  n_threads()=1
+  processor_id()=0
+
+before defining systems
+G=0 alpha_fib=0
+mesh_n_elem=32578
+*** Warning, This code is deprecated, and likely to be removed in future library versions! /work/e645/shared/sfw/linux/libmesh/1.6.2/LIBMESH/src/fe/fe_base.C, line 861, compiled Jan 11 2022 at 08:21:35 ***
+vessels_in_size52283
+vessels_size52283
+AFTER INTITIALISATION
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+source total=0.831832
+ALL GOOD
+P_ERROR=0.12454
+count=1 ttime=0.001
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+source total=0.831832
+ALL GOOD
+P_ERROR=0.103879
+count=2 ttime=0.002
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+source total=0.831832
+ALL GOOD
+P_ERROR=0.101834
+count=3 ttime=0.003
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+source total=0.831832
+ALL GOOD
+P_ERROR=0.102834
+count=4 ttime=0.004
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+time for solving=0
+source total=0.831832
+ALL GOOD
+P_ERROR=0.103737
+count=5 ttime=0.005
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 7816313.0 ON nid001274 CANCELLED AT 2024-10-15T16:16:47 ***
+slurmstepd: error: *** JOB 7816313 ON nid001274 CANCELLED AT 2024-10-15T16:16:47 ***

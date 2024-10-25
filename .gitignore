@@ -8,7 +8,6 @@ flow_data/*.csv
 flow_data/vessels_1d_flow_data_19.csv
 flow_data/vessels_1d_flow_data_0.csv
 *.csv
-*.out
 updated_vessels.csv
 flow_data/vessels_1d_flow_data_*
 flow_aha.dat

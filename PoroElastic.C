@@ -24,13 +24,13 @@ DenseVector<double> PoroElastic::vasc_nodes_x, PoroElastic::vasc_nodes_y,
 
 int PoroElastic::brinkman;
 double PoroElastic::viscocity;
-int PoroElastic::read_source, PoroElastic::read_tree, PoroElastic::read_permeability, PoroElastic::comp_size;
+int PoroElastic::read_source, PoroElastic::read_tree, PoroElastic::read_permeability, PoroElastic::comp_size, PoroElastic::homegen;
 
 double PoroElastic::coord_source[4][21990];
 DenseMatrix<double> PoroElastic::porous_data;
 DenseVector<vector<double>> PoroElastic::source_data;
 
-double PoroElastic::tau_vispe;
+double PoroElastic::tau_vispe, PoroElastic::beta_const;
 
 vector<int> PoroElastic::near_vess;
 vector<double> PoroElastic::source_vess;
@@ -83,6 +83,10 @@ void PoroElastic::read_input(int rank)
   read_permeability = infile("read_permeability", 0);
 
   comp_size = infile("comp_size", 3);
+
+  homegen = infile("homegen", 0);
+
+  beta_const = infile("beta_const", 1.0);
 }
 
 void PoroElastic::define_systems(EquationSystems &es, int rank)
@@ -514,6 +518,42 @@ void PoroElastic::define_heir_systems(EquationSystems &es)
     comp_system.add_variable(varName, FIRST, LAGRANGE);
   }
 
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "KIso" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "pDisc" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "w" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  for (int k = 1; k <= comp_size; ++k)
+  {
+    for (int i = 0; i <= 2; ++i)
+    {
+      for (int j = 0; j <= 2; ++j)
+      {
+        std::string var_name = "KElem" + std::to_string(k) + "Comp" + std::to_string(i) + std::to_string(j);
+        comp_system.add_variable(var_name, CONSTANT, MONOMIAL);
+      }
+    }
+  }
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "KElemIso" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, CONSTANT, MONOMIAL);
+  }
+
   LinearImplicitSystem &m_comp_system =
       es.add_system<LinearImplicitSystem>("mCompSystem");
 
@@ -524,6 +564,17 @@ void PoroElastic::define_heir_systems(EquationSystems &es)
   }
 
   m_comp_system.attach_assemble_function(assemble_m_comp);
+
+  LinearImplicitSystem &q_comp_system =
+      es.add_system<LinearImplicitSystem>("qCompSystem");
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "q" + std::to_string(i) + "Comp";
+    q_comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  q_comp_system.attach_assemble_function(assemble_q_comp);
 }
 
 void PoroElastic::read_perm_data(EquationSystems &es, ExodusII_IO &exo_io)
@@ -572,6 +623,9 @@ void PoroElastic::read_perm_data(EquationSystems &es, ExodusII_IO &exo_io)
     comp_name = "p" + std::to_string(i) + "Comp";
     exo_io.copy_nodal_solution(comp_system, comp_name, comp_name);
 
+    comp_name = "pDisc" + std::to_string(i) + "Comp";
+    exo_io.copy_nodal_solution(comp_system, comp_name, comp_name);
+
     for (int j = 0; j <= 2; ++j)
     {
       for (int k = 0; k <= 2; ++k)
@@ -586,6 +640,24 @@ void PoroElastic::read_perm_data(EquationSystems &es, ExodusII_IO &exo_io)
 
     comp_name = "source" + std::to_string(i) + "Comp";
     exo_io.copy_nodal_solution(comp_system, comp_name, comp_name);
+
+    comp_name = "KIso" + std::to_string(i) + "Comp";
+    exo_io.copy_nodal_solution(comp_system, comp_name, comp_name);
+
+    comp_name = "w" + std::to_string(i) + "Comp";
+    exo_io.copy_nodal_solution(comp_system, comp_name, comp_name);
+
+    for (int j = 0; j <= 2; ++j)
+    {
+      for (int k = 0; k <= 2; ++k)
+      {
+        std::string comp_name = "KElem" + std::to_string(i) + "Comp" + std::to_string(j) + std::to_string(k);
+        exo_io.copy_elemental_solution(comp_system, comp_name, comp_name);
+      }
+    }
+
+    comp_name = "KElemIso" + std::to_string(i) + "Comp";
+    exo_io.copy_elemental_solution(comp_system, comp_name, comp_name);
   }
 }
 
@@ -2465,6 +2537,11 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
         es.get_system<LinearImplicitSystem>("mCompSystem");
 
     m_comp_system.solve();
+
+    LinearImplicitSystem &q_comp_system =
+        es.get_system<LinearImplicitSystem>("qCompSystem");
+
+    q_comp_system.solve();
 
     compute_comp_error(es);
 
@@ -6747,6 +6824,7 @@ void PoroElastic::assemble_m_comp(
 
   vector<vector<dof_id_type>> dof_indices_m;
   vector<vector<dof_id_type>> dof_indices_p;
+  vector<vector<dof_id_type>> dof_indices_Kiso;
 
   dof_indices_m.resize(comp_size);
   dof_indices_p.resize(comp_size);
@@ -6768,6 +6846,7 @@ void PoroElastic::assemble_m_comp(
 
   dof_indices_beta.resize(comp_size);
   dof_indices_source.resize(comp_size);
+  dof_indices_Kiso.resize(comp_size);
 
   int last_comp = 1; //
   int out_cond = 1;  // 0 for source and 1 for pressure diff
@@ -6787,6 +6866,31 @@ void PoroElastic::assemble_m_comp(
     // working on.  This allows for nicer syntax later.
     const Elem *elem = *el;
 
+    vector<double> K_iso_elem;
+    K_iso_elem.resize(comp_size, 0.0);
+
+    vector<DenseMatrix<double>> K_comp_elem;
+    K_comp_elem.resize(comp_size);
+
+    for (int k = 0; k < comp_size; k++)
+    {
+      K_comp_elem[k].resize(MESH_DIMENSION, MESH_DIMENSION);
+
+      for (int ii = 0; ii < 3; ii++)
+      {
+        for (int jj = 0; jj < 3; jj++)
+        {
+          const unsigned int dof_index_Kcomp = elem->dof_number(comp_system.number(),
+                                                                comp_system.variable_number("KElem" + std::to_string(k + 1) + "Comp" + std::to_string(ii) + std::to_string(jj)), 0);
+          K_comp_elem[k](ii, jj) = comp_system.current_solution(dof_index_Kcomp);
+        }
+      }
+
+      const unsigned int dof_index_kiso = elem->dof_number(comp_system.number(),
+                                                           comp_system.variable_number("KElemIso" + std::to_string(k + 1) + "Comp"), 0);
+      K_iso_elem[k] = comp_system.current_solution(dof_index_kiso);
+    }
+
     // Get the degree of freedom indices for the
     // current element.  These define where in the global
     // matrix and right-hand-side this element will
@@ -6799,6 +6903,7 @@ void PoroElastic::assemble_m_comp(
       dof_map_comp.dof_indices(elem, dof_indices_p[k], comp_system.variable_number("p" + std::to_string(k + 1) + "Comp"));
       dof_map_comp.dof_indices(elem, dof_indices_beta[k], comp_system.variable_number("beta" + std::to_string(k + 1) + "Comp"));
       dof_map_comp.dof_indices(elem, dof_indices_source[k], comp_system.variable_number("source" + std::to_string(k + 1) + "Comp"));
+      dof_map_comp.dof_indices(elem, dof_indices_Kiso[k], comp_system.variable_number("KIso" + std::to_string(k + 1) + "Comp"));
     }
 
     for (int k = 0; k < comp_size; ++k)
@@ -6849,11 +6954,12 @@ void PoroElastic::assemble_m_comp(
         K_perm[k].zero();
       }
 
-      vector<double> m_cur, p_cur, beta_cur, source_cur;
+      vector<double> m_cur, p_cur, beta_cur, source_cur, K_iso_cur;
       m_cur.resize(comp_size, 0.0);
       p_cur.resize(comp_size, 0.0);
       beta_cur.resize(comp_size, 0.0);
       source_cur.resize(comp_size, 0.0);
+      K_iso_cur.resize(comp_size, 0.0);
 
       for (unsigned int j = 0; j < n_u_dofs; j++)
       {
@@ -6872,9 +6978,33 @@ void PoroElastic::assemble_m_comp(
 
         for (int k = 0; k < comp_size; k++)
         {
-          beta_cur[k] += 3.0 * phi[j][qp] * (comp_system.current_solution(dof_indices_beta[k][j]));
+          beta_cur[k] += beta_const * phi[j][qp] * (comp_system.current_solution(dof_indices_beta[k][j]));
           source_cur[k] += phi[j][qp] * (comp_system.current_solution(dof_indices_source[k][j]));
+          K_iso_cur[k] += phi[j][qp] * (comp_system.current_solution(dof_indices_Kiso[k][j]));
         }
+      }
+
+      for (int k = 0; k < comp_size; k++)
+      {
+        // K_perm[k] = K_comp_elem[k];
+        // K_iso_cur[k] = K_iso_elem[k];
+
+        // for (int ii = 0; ii < dim; ii++)
+        // {
+        //   for (int jj = 0; jj < dim; jj++)
+        //   {
+        //       K_perm[k](jj, ii) = K_perm[k](ii,jj);
+        //   }
+        // }
+
+        // K_perm[k](1, 0) = 0.0;
+        // K_perm[k](2, 0) = 0.0;
+        // K_perm[k](2, 1) = 0.0;
+
+        // K_perm[k](0, 2) = 0.0;
+        // K_perm[k](2, 0) = 0.0;
+        // K_perm[k](1, 2) = 0.0;
+        // K_perm[k](2, 1) = 0.0;
       }
 
       // beta_cur[1] *= 50.0;
@@ -6883,17 +7013,49 @@ void PoroElastic::assemble_m_comp(
       {
         for (int k = 0; k < comp_size; k++)
         {
-#if (MESH_DIMENSION == 2)
-          double k_iso = 0.5 * (K_perm[k](0, 0) + K_perm[k](1, 1));
-#elif (MESH_DIMENSION == 3)
-          double k_iso = (1.0 / 3.0) * (K_perm[k](0, 0) + K_perm[k](1, 1) + K_perm[k](2, 2));
-#endif
+          double k_iso = 0.0;
+
+          if (homegen == 1)
+          {
+            if (comp_size == 2)
+            {
+              if (k == 0)
+                k_iso = 3.9e-5;
+              else
+                k_iso = 3.8e-6;
+            }
+            else if (comp_size == 3)
+            {
+              if (k == 0)
+                k_iso = 3.9e-5;
+              else if (k == 1)
+                k_iso = 3.58e-6;
+              else
+                k_iso = 1.96e-7;
+            }
+            else if (comp_size == 4)
+            {
+              if (k == 0)
+                k_iso = 3.90009e-05;
+              else if (k == 1)
+                k_iso = 3.27579e-06;
+              else if (k == 2)
+                k_iso = 3.0077e-07;
+              else
+                k_iso = 1.96262e-07;
+            }
+          }
+
+          else
+          {
+            k_iso = K_iso_cur[k];
+          }
 
           K_perm[k].zero();
-          K_perm[k](0, 0) = k_iso;
-          K_perm[k](1, 1) = k_iso;
+          K_perm[k](0, 0) = k_iso; // K_iso_cur[k];// k_iso;
+          K_perm[k](1, 1) = k_iso; //  K_iso_cur[k]; //k_iso;
 #if (MESH_DIMENSION == 3)
-          K_perm[k](2, 2) = k_iso;
+          K_perm[k](2, 2) = k_iso; //  K_iso_cur[k]; // k_iso;
 #endif
         }
       }
@@ -6971,14 +7133,16 @@ void PoroElastic::assemble_m_comp(
             gradNB(i) = dphi[dof_j][qp](i);
           }
 
-          vector<DenseVector<double>> kdivXNB(MESH_DIMENSION);
+          vector<DenseVector<double>> kdivXNB(comp_size);
           for (int k = 0; k < comp_size; k++)
           {
+            kdivXNB[k].resize(MESH_DIMENSION);
             K_perm[k].vector_mult(kdivXNB[k], gradNB);
           }
 
           for (int k = 0; k < comp_size; k++)
           {
+
             if (k == 0)
               (*Ke_var[k][k])(dof_i, dof_j) += phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
             else
@@ -7039,6 +7203,7 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
 
   LinearImplicitSystem &comp_system = es.get_system<LinearImplicitSystem>("compSystem");
   LinearImplicitSystem &m_comp_system = es.get_system<LinearImplicitSystem>("mCompSystem");
+  LinearImplicitSystem &q_comp_system = es.get_system<LinearImplicitSystem>("qCompSystem");
 
   NumericVector<double> &comp_data = *(comp_system.current_local_solution);
   comp_data.close();
@@ -7046,16 +7211,23 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
   NumericVector<double> &m_comp_data = *(m_comp_system.current_local_solution);
   m_comp_data.close();
 
+  NumericVector<double> &q_comp_data = *(q_comp_system.current_local_solution);
+  q_comp_data.close();
+
   vector<double> comp_vec;
   comp_data.localize(comp_vec);
 
   vector<double> m_comp_vec;
   m_comp_data.localize(m_comp_vec);
 
+  vector<double> q_comp_vec;
+  q_comp_data.localize(q_comp_vec);
+
   libMesh::MeshBase::const_node_iterator node_it = mesh.local_nodes_begin();
   libMesh::MeshBase::const_node_iterator node_end = mesh.local_nodes_end();
 
   double p_err = 0.0;
+  double w_err = 0.0;
   double node_num = 0.0;
 
   for (; node_it != node_end; ++node_it)
@@ -7063,43 +7235,357 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
     node_num = node_num + 1.0;
     const libMesh::Node *nd = *node_it;
 
-    vector<double> p_pois, m_darc, p_darc, phi_comp;
+    vector<double> p_pois, m_darc, p_darc, phi_comp, w_comp, q_comp, p_disc;
     p_pois.resize(comp_size, 0.0);
+    p_disc.resize(comp_size, 0.0);
     m_darc.resize(comp_size, 0.0);
     p_darc.resize(comp_size, 0.0);
     phi_comp.resize(comp_size, 0.0);
+    w_comp.resize(comp_size, 0.0);
+    q_comp.resize(comp_size, 0.0);
 
-    double p_pois_mean = 0.0, p_darc_mean = 0.0, phi_mean = 0.0;
+    double p_pois_mean = 0.0, p_darc_mean = 0.0, phi_mean = 0.0, w_mean = 0.0, q_mean = 0.0;;
 
     for (int i = 0; i < comp_size; i++)
     {
       const unsigned int dof_num_ppois = nd->dof_number(comp_system.number(),
                                                         comp_system.variable_number("p" + std::to_string(i + 1) + "Comp"), 0);
+      const unsigned int dof_num_pdisc = nd->dof_number(comp_system.number(),
+                                                        comp_system.variable_number("pDisc" + std::to_string(i + 1) + "Comp"), 0);
       const unsigned int dof_num_phicomp = nd->dof_number(comp_system.number(),
                                                           comp_system.variable_number("phi" + std::to_string(i + 1) + "Comp"), 0);
       const unsigned int dof_num_mdarc = nd->dof_number(m_comp_system.number(),
                                                         m_comp_system.variable_number("m" + std::to_string(i + 1) + "Comp"), 0);
+
+      const unsigned int dof_num_w = nd->dof_number(comp_system.number(),
+                                                    comp_system.variable_number("w" + std::to_string(i + 1) + "Comp"), 0);
+
+      const unsigned int dof_num_q = nd->dof_number(q_comp_system.number(),
+                                                    q_comp_system.variable_number("q" + std::to_string(i + 1) + "Comp"), 0);
+
       p_pois[i] = comp_vec[dof_num_ppois];
       phi_comp[i] = comp_vec[dof_num_phicomp];
       m_darc[i] = m_comp_vec[dof_num_mdarc];
 
       p_darc[i] = m_darc[i] * kappa_0;
 
+      w_comp[i] = comp_vec[dof_num_w];
+      q_comp[i] = q_comp_vec[dof_num_q];
+
       p_pois_mean += p_pois[i] * phi_comp[i];
       p_darc_mean += p_darc[i] * phi_comp[i];
       phi_mean += phi_comp[i];
+
+      w_mean += w_comp[i] * phi_comp[i];
+      q_mean += q_comp[i] * phi_comp[i];
     }
 
     if (phi_mean > 1.0e-8)
     {
       p_pois_mean /= phi_mean;
       p_darc_mean /= phi_mean;
+      w_mean /= phi_mean;
+      q_mean /= phi_mean;
     }
 
+
     p_err += pow((p_pois_mean - p_darc_mean) / 1.3e5, 2);
+    w_err += pow((w_mean - q_mean)/380.0, 2);
   }
 
   p_err = sqrt(p_err / node_num);
+  w_err = sqrt(w_err / node_num);
 
   cout << "P_ERROR=" << p_err << endl;
+  cout << "W_ERROR=" << w_err << endl;
+}
+
+void PoroElastic::assemble_q_comp(
+    EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
+{
+  // Get a constant reference to the mesh object.
+  const MeshBase &mesh = es.get_mesh();
+
+  // The dimension that we are running
+  const unsigned int dim = mesh.mesh_dimension();
+
+  LinearImplicitSystem &m_comp_system =
+      es.get_system<LinearImplicitSystem>("mCompSystem");
+
+  LinearImplicitSystem &q_comp_system =
+      es.get_system<LinearImplicitSystem>("qCompSystem");
+
+  // Get a reference to the Stokes system object.
+  LinearImplicitSystem &comp_system =
+      es.get_system<LinearImplicitSystem>("compSystem");
+
+  unsigned int u_var;
+
+  // Numeric ids corresponding to each variable in the system
+  u_var = q_comp_system.variable_number("q1Comp");
+  FEType fe_vel_type = q_comp_system.variable_type(u_var);
+  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
+  QGauss qrule(dim, CONSTANT);
+
+  // Tell the finite element objects to use our quadrature rule.
+  fe_vel->attach_quadrature_rule(&qrule);
+
+  UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
+  QGauss qface(dim - 1,
+               CONSTANT); // Not sure what the
+                          // best accuracy is here
+
+  fe_face->attach_quadrature_rule(&qface);
+
+  const std::vector<double> &JxW = fe_vel->get_JxW();
+  const std::vector<std::vector<double>> &phi = fe_vel->get_phi();
+  const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
+
+  const DofMap &dof_map = q_comp_system.get_dof_map();
+  const DofMap &dof_map_m_comp = m_comp_system.get_dof_map();
+  const DofMap &dof_map_comp = comp_system.get_dof_map();
+
+  DenseMatrix<Number> Ke;
+  DenseVector<double> Fe;
+  DenseSubMatrix<Number> *Ke_var[comp_size][comp_size];
+  DenseSubVector<double> *Fe_var[comp_size];
+
+  // Initialize the submatrices in a loop
+  for (unsigned int i = 0; i < comp_size; ++i)
+  {
+    Fe_var[i] = new DenseSubVector<Number>(Fe);
+    for (unsigned int j = 0; j < comp_size; ++j)
+    {
+      Ke_var[i][j] = new DenseSubMatrix<Number>(Ke);
+    }
+  }
+
+  // This vector will hold the degree of freedom indices for
+  // the element.  These define where in the global system
+  // the element degrees of freedom get mapped.
+  std::vector<dof_id_type> dof_indices;
+
+  vector<vector<dof_id_type>> dof_indices_q;
+  vector<vector<dof_id_type>> dof_indices_m;
+  vector<vector<dof_id_type>> dof_indices_Kiso;
+
+  dof_indices_q.resize(comp_size);
+  dof_indices_m.resize(comp_size);
+  dof_indices_Kiso.resize(comp_size);
+
+  vector<vector<vector<vector<dof_id_type>>>> dof_indices_k;
+
+  dof_indices_k.resize(comp_size); // Resize to accommodate k values from 0 to maxK
+  for (int k = 0; k < comp_size; ++k)
+  {
+    dof_indices_k[k].resize(dim); // Resize each k to accommodate the indices 0, 1, 2
+    for (int i = 0; i < dim; ++i)
+    {
+      dof_indices_k[k][i].resize(dim); // Resize for dof_indices_k_ij
+    }
+  }
+
+  // Now we will loop over all the elements in the mesh that
+  // live on the local processor. We will compute the element
+  // matrix and right-hand-side contribution.  Since the mesh
+  // will be refined we want to only consider the ACTIVE elements,
+  // hence we use a variant of the active_elem_iterator.
+  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
+  const MeshBase::const_element_iterator end_el =
+      mesh.active_local_elements_end();
+
+  for (; el != end_el; ++el)
+  {
+    // Store a pointer to the element we are currently
+    // working on.  This allows for nicer syntax later.
+    const Elem *elem = *el;
+
+    // Get the degree of freedom indices for the
+    // current element.  These define where in the global
+    // matrix and right-hand-side this element will
+    // contribute to.
+    dof_map.dof_indices(elem, dof_indices);
+
+    for (int k = 0; k < comp_size; k++)
+    {
+      dof_map.dof_indices(elem, dof_indices_q[k], q_comp_system.variable_number("q" + std::to_string(k + 1) + "Comp"));
+      dof_map_m_comp.dof_indices(elem, dof_indices_m[k], m_comp_system.variable_number("m" + std::to_string(k + 1) + "Comp"));
+      dof_map_comp.dof_indices(elem, dof_indices_Kiso[k], comp_system.variable_number("KIso" + std::to_string(k + 1) + "Comp"));
+    }
+
+    for (int k = 0; k < comp_size; ++k)
+    {
+      for (int i = 0; i < dim; ++i)
+      {
+        for (int j = 0; j < dim; j++)
+        {
+          dof_map_comp.dof_indices(elem, dof_indices_k[k][i][j],
+                                   comp_system.variable_number("K" + std::to_string(k + 1) + "Comp" + std::to_string(i) + std::to_string(j)));
+        }
+      }
+    }
+
+    unsigned int n_dofs, n_u_dofs;
+
+    n_dofs = dof_indices.size();
+    n_u_dofs = dof_indices_q[0].size();
+
+    fe_vel->reinit(elem);
+
+    Ke.resize(n_dofs, n_dofs);
+    Fe.resize(n_dofs);
+
+    for (unsigned int i = 0; i < comp_size; ++i)
+    {
+      Fe_var[i]->reposition(i * n_u_dofs, n_u_dofs);
+      for (unsigned int j = 0; j < comp_size; ++j)
+      {
+        Ke_var[i][j]->reposition(i * n_u_dofs, j * n_u_dofs, n_u_dofs, n_u_dofs);
+      }
+    }
+
+    // Now we will build the element matrix and right-hand-side.
+    // Constructing the RHS requires the solution and its
+    // gradient from the previous timestep.  This must be
+    // calculated at each quadrature point by summing the
+    // solution degree-of-freedom values by the appropriate
+    // weight functions.
+    for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
+    {
+      vector<DenseMatrix<double>> K_perm;
+      K_perm.resize(comp_size);
+
+      vector<DenseVector<double>> dm_cur;
+      dm_cur.resize(comp_size);
+
+      for (int k = 0; k < comp_size; k++)
+      {
+        K_perm[k].resize(MESH_DIMENSION, MESH_DIMENSION);
+        K_perm[k].zero();
+        dm_cur[k].resize(MESH_DIMENSION);
+        dm_cur[k].zero();
+      }
+
+      vector<double> K_iso_cur;
+      K_iso_cur.resize(comp_size, 0.0);
+
+      for (unsigned int j = 0; j < n_u_dofs; j++)
+      {
+        for (int k = 0; k < comp_size; k++)
+        {
+          for (int ii = 0; ii < dim; ii++)
+          {
+            dm_cur[k](ii) += dphi[j][qp](ii) * (m_comp_system.current_solution(dof_indices_m[k][j]));
+            for (int jj = 0; jj < dim; jj++)
+            {
+              K_perm[k](ii, jj) += phi[j][qp] * (comp_system.current_solution(dof_indices_k[k][ii][jj][j]));
+            }
+          }
+          K_iso_cur[k] += phi[j][qp] * (comp_system.current_solution(dof_indices_Kiso[k][j]));
+        }
+      }
+
+      // for (int k = 0; k < comp_size; k++)
+      // {
+      //   K_perm[k] = K_comp_elem[k];
+      //   K_iso_cur[k] = K_iso_elem[k];
+      // }
+
+      // beta_cur[1] *= 50.0;
+
+      if (InputParam::anis_perm == 0)
+      {
+        for (int k = 0; k < comp_size; k++)
+        {
+          double k_iso = 0.0;
+
+          if (homegen == 1)
+          {
+            if (comp_size == 2)
+            {
+              if (k == 0)
+                k_iso = 3.9e-5;
+              else
+                k_iso = 3.8e-6;
+            }
+            else if (comp_size == 3)
+            {
+              if (k == 0)
+                k_iso = 3.9e-5;
+              else if (k == 1)
+                k_iso = 3.58e-6;
+              else
+                k_iso = 1.96e-7;
+            }
+            else if (comp_size == 4)
+            {
+              if (k == 0)
+                k_iso = 3.90009e-05;
+              else if (k == 1)
+                k_iso = 3.27579e-06;
+              else if (k == 2)
+                k_iso = 3.0077e-07;
+              else
+                k_iso = 1.96262e-07;
+            }
+          }
+
+          else
+          {
+            k_iso = K_iso_cur[k];
+          }
+
+          K_perm[k].zero();
+          K_perm[k](0, 0) = k_iso; // K_iso_cur[k];// k_iso;
+          K_perm[k](1, 1) = k_iso; //  K_iso_cur[k]; //k_iso;
+#if (MESH_DIMENSION == 3)
+          K_perm[k](2, 2) = k_iso; //  K_iso_cur[k]; // k_iso;
+#endif
+        }
+      }
+
+      GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
+
+      vector<DenseVector<double>> w_vec;
+      w_vec.resize(comp_size);
+
+      vector<double> w_mag;
+      w_mag.resize(comp_size, 0.0);
+
+      for (int k = 0; k < comp_size; k++)
+      {
+        w_vec[k].resize(MESH_DIMENSION);
+        w_vec[k].zero();
+
+        K_perm[k].scale(permeability);
+
+        K_perm[k].vector_mult(w_vec[k], dm_cur[k]);
+
+        w_vec[k].scale(kappa_0);
+
+        w_mag[k] = w_vec[k].l2_norm();
+      }
+
+      for (unsigned int dof_i = 0; dof_i < n_u_dofs; dof_i++)
+      {
+
+        for (int k = 0; k < comp_size; k++)
+        {
+          (*Fe_var[k])(dof_i) += w_mag[k] * phi[dof_i][qp] * JxW[qp];
+        }
+
+        // Matrix contributions for the uu and vv couplings.
+        for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
+        {
+          for (int k = 0; k < comp_size; k++)
+          {
+            (*Ke_var[k][k])(dof_i, dof_j) += phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
+          }
+        }
+      }
+    } // end of the quadrature point qp-loop
+
+    q_comp_system.matrix->add_matrix(Ke, dof_indices);
+    q_comp_system.rhs->add_vector(Fe, dof_indices);
+  } // end of element loop
 }

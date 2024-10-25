@@ -1,5 +1,5 @@
 mesh_file_name =  Square_mesh.e
-perm_file_name = frame_perm_comp_3.e
+perm_file_name = frame_perm.e
 zone_file_name = zone_data.dat
 zone_file_name_2 = zone_data_2.dat
 zone_file_name_3 = zone_data_3.dat
@@ -8,11 +8,11 @@ mesh_scale = 0.1 // 1.0 //0.1
 mesh_centre = 1
 mesh_dim = 3 //2
 
-comp_size = 3
+comp_size = 2
 
 second_order_elem = 0 // 0 for first order 1 for second order
 
-write_data_skip = 20 // 20 // 5 // 50
+write_data_skip = 2 // 20 // 5 // 50
 write_data_bound = 10
 
 flow_solver = 0
@@ -37,6 +37,8 @@ porous = 1
 heirarchy = 1
 
 anis_perm = 0 // 1
+
+homegen = 0  // 1 for homegeneous permeability, 0 for non-homogeneous permeability
 
 solve_hyper = 0
 
@@ -113,7 +115,9 @@ sink_const = 0.0 // 3.0e-6
 sink_prssr = 0.0 // 1.3e4
 biot_modulus = 2.18e6
 kappa_0 = 1.0e8 // 1.0e4 // 1.0e6 // 1.0e9 // 0.01 // 0.01 //  1.0e6 // 1.0e10 //0.1
-permeability = 10.0 // 5.0 // 1.0 // 1.0e-8 // 1.0 // 1.0e7 //1.0e-6 // 1.0 // 1.0e-4 // 2.0e-6
+permeability = 15.0 // 35.0 // 5.0 // 1.0 // 1.0e-8 // 1.0 // 1.0e7 //1.0e-6 // 1.0 // 1.0e-4 // 2.0e-6
+
+beta_const = 0.6
 
 q1 = 0.022e4
 q2 = 1.009e4
