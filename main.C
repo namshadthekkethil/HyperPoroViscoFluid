@@ -311,7 +311,6 @@ cout<<"AFTER INTITIALISATION"<<endl;
 
         // PoroElastic::update_flowlarge(es,es_fluid);
 
-        PoroElastic::update_source_heir(es, es_fluid);
         cout << "ALL GOOD" << endl;
       }
       PoroElastic::update_poroelastic(es);

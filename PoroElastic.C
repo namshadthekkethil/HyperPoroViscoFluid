@@ -425,60 +425,6 @@ void PoroElastic::define_systems(EquationSystems &es, int rank)
 
 void PoroElastic::define_heir_systems(EquationSystems &es)
 {
-  LinearImplicitSystem &zone_system =
-      es.add_system<LinearImplicitSystem>("zoneSystem");
-  zone_system.add_variable("zoneVar", CONSTANT, MONOMIAL);
-  zone_system.add_variable("zone2Var", CONSTANT, MONOMIAL);
-
-  LinearImplicitSystem &phi_system =
-      es.add_system<LinearImplicitSystem>("phiSystem");
-  phi_system.add_variable("phiVar", CONSTANT, MONOMIAL);
-  phi_system.add_variable("phi2Var", CONSTANT, MONOMIAL);
-
-  LinearImplicitSystem &dist_system =
-      es.add_system<LinearImplicitSystem>("distSystem");
-  dist_system.add_variable("distVar", CONSTANT, MONOMIAL);
-  dist_system.add_variable("dist2Var", CONSTANT, MONOMIAL);
-
-  LinearImplicitSystem &perm_system =
-      es.add_system<LinearImplicitSystem>("permSystem");
-  perm_system.add_variable("K00Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K01Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K02Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K10Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K11Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K12Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K20Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K21Var", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K22Var", CONSTANT, MONOMIAL);
-
-  perm_system.add_variable("K00Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K01Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K02Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K10Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K11Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K12Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K20Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K21Var2", CONSTANT, MONOMIAL);
-  perm_system.add_variable("K22Var2", CONSTANT, MONOMIAL);
-
-  LinearImplicitSystem &source_system =
-      es.add_system<LinearImplicitSystem>("sourceHSystem");
-  source_system.add_variable("sourceHVar", CONSTANT, MONOMIAL);
-  source_system.add_variable("sourceHVar2", CONSTANT, MONOMIAL);
-  source_system.add_variable("sourceHVar3", CONSTANT, MONOMIAL);
-
-  LinearImplicitSystem &m_system =
-      es.add_system<LinearImplicitSystem>("mHSystem");
-  m_system.add_variable("mHVar", FIRST, LAGRANGE);
-  m_system.add_variable("mHVar2", FIRST, LAGRANGE);
-
-  LinearImplicitSystem &system_ppore = es.get_system<LinearImplicitSystem>("pPoreSystem");
-
-  m_system.attach_assemble_function(assemble_m_heir);
-
-  system_ppore.attach_assemble_function(assemble_ppore_heir);
-
   LinearImplicitSystem &comp_system =
       es.add_system<LinearImplicitSystem>("compSystem");
 
@@ -554,6 +500,12 @@ void PoroElastic::define_heir_systems(EquationSystems &es)
     comp_system.add_variable(varName, CONSTANT, MONOMIAL);
   }
 
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "volDisc" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
   LinearImplicitSystem &m_comp_system =
       es.add_system<LinearImplicitSystem>("mCompSystem");
 
@@ -579,39 +531,6 @@ void PoroElastic::define_heir_systems(EquationSystems &es)
 
 void PoroElastic::read_perm_data(EquationSystems &es, ExodusII_IO &exo_io)
 {
-  System &zone_system = es.get_system<System>("zoneSystem");
-  System &phi_system = es.get_system<System>("phiSystem");
-  System &perm_system = es.get_system<System>("permSystem");
-  System &dist_system = es.get_system<System>("distSystem");
-
-  exo_io.copy_elemental_solution(zone_system, "zoneVar", "zoneModVar");
-  exo_io.copy_elemental_solution(zone_system, "zone2Var", "zoneMod2Var");
-
-  exo_io.copy_elemental_solution(phi_system, "phiVar", "phiVar");
-  exo_io.copy_elemental_solution(phi_system, "phi2Var", "phi2Var");
-
-  exo_io.copy_elemental_solution(dist_system, "distVar", "distVar");
-  exo_io.copy_elemental_solution(dist_system, "dist2Var", "dist2Var");
-
-  exo_io.copy_elemental_solution(perm_system, "K00Var", "K00Var");
-  exo_io.copy_elemental_solution(perm_system, "K01Var", "K01Var");
-  exo_io.copy_elemental_solution(perm_system, "K02Var", "K02Var");
-  exo_io.copy_elemental_solution(perm_system, "K10Var", "K10Var");
-  exo_io.copy_elemental_solution(perm_system, "K11Var", "K11Var");
-  exo_io.copy_elemental_solution(perm_system, "K12Var", "K12Var");
-  exo_io.copy_elemental_solution(perm_system, "K20Var", "K20Var");
-  exo_io.copy_elemental_solution(perm_system, "K21Var", "K21Var");
-  exo_io.copy_elemental_solution(perm_system, "K22Var", "K22Var");
-
-  exo_io.copy_elemental_solution(perm_system, "K00Var2", "K00Var2");
-  exo_io.copy_elemental_solution(perm_system, "K01Var2", "K01Var2");
-  exo_io.copy_elemental_solution(perm_system, "K02Var2", "K02Var2");
-  exo_io.copy_elemental_solution(perm_system, "K10Var2", "K10Var2");
-  exo_io.copy_elemental_solution(perm_system, "K11Var2", "K11Var2");
-  exo_io.copy_elemental_solution(perm_system, "K12Var2", "K12Var2");
-  exo_io.copy_elemental_solution(perm_system, "K20Var2", "K20Var2");
-  exo_io.copy_elemental_solution(perm_system, "K21Var2", "K21Var2");
-  exo_io.copy_elemental_solution(perm_system, "K22Var2", "K22Var2");
 
   System &comp_system = es.get_system<System>("compSystem");
 
@@ -658,6 +577,9 @@ void PoroElastic::read_perm_data(EquationSystems &es, ExodusII_IO &exo_io)
 
     comp_name = "KElemIso" + std::to_string(i) + "Comp";
     exo_io.copy_elemental_solution(comp_system, comp_name, comp_name);
+
+    comp_name = "volDisc" + std::to_string(i) + "Comp";
+    exo_io.copy_nodal_solution(comp_system, comp_name, comp_name);
   }
 }
 
@@ -2528,10 +2450,6 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
 
   if (InputParam::heirarchy == 1)
   {
-    LinearImplicitSystem &m_system =
-        es.get_system<LinearImplicitSystem>("mHSystem");
-
-    m_system.solve();
 
     LinearImplicitSystem &m_comp_system =
         es.get_system<LinearImplicitSystem>("mCompSystem");
@@ -2570,7 +2488,7 @@ void PoroElastic::update_poroelastic(EquationSystems &es)
 
     else
     {
-      update_ppore_heir(es);
+
     }
 
     // solve_darcy(es);
@@ -3489,47 +3407,6 @@ void PoroElastic::update_ppore(EquationSystems &es)
   ppore_solution.localize(*system_ppore.current_local_solution);
 }
 
-void PoroElastic::update_ppore_heir(EquationSystems &es)
-{
-  System &system_ppore = es.get_system<System>("pPoreSystem");
-  System &system_pnorm = es.get_system<System>("NonlinearElasticity");
-
-  System &system_flow = es.get_system<System>("mHSystem");
-
-  NumericVector<double> &ppore_solution = *(system_ppore.solution);
-  ppore_solution.close();
-  ppore_solution.localize(*system_ppore.current_local_solution);
-
-  NumericVector<double> &pnorm_solution = *(system_pnorm.solution);
-  pnorm_solution.close();
-
-  NumericVector<double> &m_solution = *(system_flow.solution);
-  m_solution.close();
-  m_solution.localize(*system_flow.current_local_solution);
-
-  libMesh::MeshBase &mesh = es.get_mesh();
-  libMesh::MeshBase::const_node_iterator node_it = mesh.local_nodes_begin();
-  libMesh::MeshBase::const_node_iterator node_end = mesh.local_nodes_end();
-
-  for (; node_it != node_end; ++node_it)
-  {
-    const libMesh::Node *nd = *node_it;
-
-    const unsigned int dof_num_ppore =
-        nd->dof_number(system_ppore.number(), 0, 0);
-    const unsigned int pnorm_dof_num =
-        nd->dof_number(system_pnorm.number(), MESH_DIMENSION, 0);
-    const unsigned int m_dof_num = nd->dof_number(system_flow.number(), 0, 0);
-
-    double m_cur = m_solution(m_dof_num);
-    double pnorm_cur = -pnorm_solution(pnorm_dof_num);
-
-    ppore_solution.set(dof_num_ppore, pnorm_cur + kappa_0 * m_cur);
-  }
-  ppore_solution.close();
-  ppore_solution.localize(*system_ppore.current_local_solution);
-}
-
 void PoroElastic::assemble_delw(
     EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
 {
@@ -3819,165 +3696,7 @@ void PoroElastic::update_source(EquationSystems &es, EquationSystems &es_fluid)
   system_source.solution->localize(*system_source.current_local_solution);
 }
 
-void PoroElastic::update_source_heir(EquationSystems &es, EquationSystems &es_fluid)
-{
-  libMesh::MeshBase &mesh = es.get_mesh();
-  const unsigned int dim = mesh.mesh_dimension();
 
-  System &system_source = es.get_system<System>("sourceHSystem");
-  unsigned int u_var = system_source.variable_number("sourceHVar");
-  unsigned int system_source_num = system_source.number();
-
-  const MeshBase &mesh_fluid = es_fluid.get_mesh();
-
-  LinearImplicitSystem &flow_system =
-      es_fluid.get_system<LinearImplicitSystem>("flowSystem");
-
-  System &system_dist = es.get_system<System>("distSystem");
-
-  // LinearImplicitSystem &darcy_system =
-  //     es.get_system<LinearImplicitSystem>("porousp2p1System");
-
-  NumericVector<double> &flow_data = *(flow_system.current_local_solution);
-  flow_data.close();
-
-  vector<double> flow_vec;
-  flow_data.localize(flow_vec);
-
-  const DofMap &dof_map_flow = flow_system.get_dof_map();
-  std::vector<dof_id_type> dof_indices_Q;
-
-  // const DofMap &dof_map = darcy_system.get_dof_map();
-  // std::vector<std::vector<dof_id_type>> dof_indices_uvw(dim);
-
-  double sigma_g = 0.5;
-
-  double a_const = 1.0 / (sigma_g * sqrt(2.0 * M_PI));
-  double b_const = -1.0 / (2 * sigma_g * sigma_g);
-
-  FEType fe_vel_type = system_source.variable_type(u_var);
-  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
-  QGauss qrule(dim, CONSTANT);
-  fe_vel->attach_quadrature_rule(&qrule);
-
-  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
-  const MeshBase::const_element_iterator end_el =
-      mesh.active_local_elements_end();
-
-  double source_total = 0.0;
-
-  for (; el != end_el; ++el)
-  {
-    const Elem *elem = *el;
-
-    //     for (unsigned int var = 0; var < MESH_DIMENSION; var++)
-    //     {
-    //       dof_map.dof_indices(elem, dof_indices_uvw[var], var);
-    //     }
-
-    //     double wx_cur = darcy_system.current_solution(dof_indices_uvw[0][0]);
-    //     double wy_cur = darcy_system.current_solution(dof_indices_uvw[1][0]);
-    // #if (MESH_DIMENSION == 3)
-    //     double wz_cur = darcy_system.current_solution(dof_indices_uvw[2][0]);
-    // #endif
-
-    //     double w_mag = pow(wx_cur, 2) + pow(wy_cur, 2);
-
-    // #if (MESH_DIMENSION == 3)
-    //     w_mag = pow(wz_cur, 2);
-    // #endif
-
-    //     w_mag = sqrt(w_mag);
-
-    const int dof_index_dist = elem->dof_number(system_dist.number(), 0, 0);
-    double dist_zone_1 = system_dist.current_solution(dof_index_dist);
-    dist_zone_1 *= InputParam::mesh_scale;
-
-    Point elem_cent = elem->centroid();
-
-    double source_cur = 0.0;
-    for (int i = 0; i < InputParam::zone_parent.size(); i++)
-    {
-      Point cent_diff = InputParam::zone_inlet[i];
-      cent_diff.subtract(elem_cent);
-      double dist_2 = cent_diff.norm_sq();
-
-      // dist_2 = dist_zone_1*dist_zone_1;
-
-      // const Elem *elem_fluid = mesh_fluid.elem_ptr(InputParam::zone_parent[i]);
-      // dof_map_flow.dof_indices(elem_fluid, dof_indices_Q, 0);
-      double Q_cur = 0.0; // flow_vec[dof_indices_Q[1]];
-
-      double flow_cur = InputParam::zone_flow[i]; //(Q_cur) / InputParam::zone_volumes[i];
-
-      // if(InputParam::ttime < 0.1)
-      // source_cur += a_const * exp(b_const * (dist_2)) * sin(2.0 * M_PI * InputParam::ttime); // flow_cur;
-
-      if (InputParam::ttime < 0.1)
-        source_cur += a_const * exp(b_const * (dist_2)); // flow_cur;
-
-      // cout << "source_cur=" << source_cur << " " << a_const << " " << b_const << " " << dist_2<< " "<< flow_cur << endl;
-    }
-
-    source_total += source_cur * elem->volume();
-
-    // source_cur = 1.2e-1;
-
-    const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
-    system_source.solution->set(dof_index_source, source_cur);
-
-    source_cur = 0.0;
-    for (int i = 0; i < InputParam::zone_parent_2.size(); i++)
-    {
-      Point cent_diff = InputParam::zone_inlet_2[i];
-      cent_diff.subtract(elem_cent);
-      double dist_2 = cent_diff.norm_sq();
-
-      // const Elem *elem_fluid = mesh_fluid.elem_ptr(InputParam::zone_parent_2[i]);
-      // dof_map_flow.dof_indices(elem_fluid, dof_indices_Q, 0);
-      double Q_cur = 0.0; // flow_vec[dof_indices_Q[1]];
-
-      double dzetadn_cur = -0.0723 * (0.0085 * pow(InputParam::zone_zeta_2[i], 2) + 0.02 * InputParam::zone_zeta_2[i] + 0.00065);
-
-      double flow_cur = (1.0 / InputParam::zone_zetadiff_2[i]) * dzetadn_cur; // InputParam::zone_flow_2[i];// (Q_cur) / InputParam::zone_volumes_2[i];
-
-      // source_cur += a_const * exp(b_const * (dist_2)) * 10.0 * (InputParam::zone_volumes_2[i] / InputParam::zone_volumes_2[0]); // flow_cur;
-      source_cur += a_const * exp(b_const * (dist_2)) * 0.02 * 1.0e-4 * kappa_0 * (InputParam::zone_volumes_2[i] / InputParam::zone_volumes_2[0]) * 10.0; // flow_cur;
-
-      Point diff_21 = InputParam::zone_inlet_2[i];
-      diff_21.subtract(InputParam::zone_inlet[0]);
-      double dist_21 = diff_21.norm_sq();
-
-      // if (dist_21 > 6.25)
-      //   source_cur += 1.0e-6*a_const * exp(b_const * (dist_2)) * flow_cur;// InputParam::zone_beta_daught_2[i]; // * w_mag * 100;
-
-      // source_cur += a_const * exp(b_const * (dist_2)) * (1.0/991.0);
-    }
-
-    // source_cur = 0.02*1.0e-4*kappa_0;
-
-    const int dof_index_source_2 = elem->dof_number(system_source_num, 1, 0);
-    system_source.solution->set(dof_index_source_2, source_cur);
-
-    source_cur = 0.0;
-    for (int i = 0; i < InputParam::zone_inlet_3.size(); i++)
-    {
-      Point cent_diff = InputParam::zone_inlet_3[i];
-      cent_diff.subtract(elem_cent);
-      double dist_2 = cent_diff.norm_sq();
-
-      source_cur += a_const * exp(b_const * (dist_2)) * (1.0 / InputParam::zone_inlet_3.size());
-    }
-
-    const int dof_index_source_3 = elem->dof_number(system_source_num, 2, 0);
-    system_source.solution->set(dof_index_source_3, source_cur);
-  }
-
-  cout << "source total=" << source_total << endl;
-
-  system_source.solution->close();
-  system_source.solution->localize(*system_source.current_local_solution);
-}
 
 void PoroElastic::update_flowlarge(EquationSystems &es, EquationSystems &es_fluid)
 {
@@ -4928,405 +4647,7 @@ void PoroElastic::assemble_porous_p1p0(
   } // end of element loop
 }
 
-void PoroElastic::assemble_m_heir(
-    EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
-{
-  // Get a constant reference to the mesh object.
-  const MeshBase &mesh = es.get_mesh();
 
-  // The dimension that we are running
-  const unsigned int dim = mesh.mesh_dimension();
-
-  // Get a reference to the Stokes system object.
-  LinearImplicitSystem &flow_system =
-      es.get_system<LinearImplicitSystem>("mHSystem");
-
-  unsigned int u_var;
-
-  System &K_system = es.get_system<System>("permSystem");
-  const DofMap &K_dof_map = K_system.get_dof_map();
-
-  System &system_source = es.get_system<System>("sourceHSystem");
-  unsigned int system_source_num = system_source.number();
-
-  NumericVector<double> &K_solution = *(K_system.solution);
-  K_solution.close();
-  K_solution.localize(*K_system.current_local_solution);
-
-  // Numeric ids corresponding to each variable in the system
-  u_var = flow_system.variable_number("mHVar");
-  FEType fe_vel_type = flow_system.variable_type(u_var);
-  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
-  QGauss qrule(dim, CONSTANT);
-
-  // Tell the finite element objects to use our quadrature rule.
-  fe_vel->attach_quadrature_rule(&qrule);
-
-  UniquePtr<FEBase> fe_face(FEBase::build(dim, fe_vel_type));
-  QGauss qface(dim - 1,
-               CONSTANT); // Not sure what the
-                          // best accuracy is here
-
-  fe_face->attach_quadrature_rule(&qface);
-
-  const std::vector<double> &JxW = fe_vel->get_JxW();
-  const std::vector<std::vector<double>> &phi = fe_vel->get_phi();
-  const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
-
-  const DofMap &dof_map = flow_system.get_dof_map();
-
-  // Define data structures to contain the element matrix
-  // and right-hand-side vector contribution.  Following
-  // basic finite element terminology we will denote these
-  // "Ke" and "Fe".
-  DenseMatrix<double> Ke;
-  DenseVector<double> Fe;
-
-  DenseSubMatrix<double> Kmm(Ke), Km2m2(Ke), Kmm2(Ke), Km2m(Ke);
-
-  DenseSubVector<double> Fm(Fe), Fm2(Fe);
-
-  // This vector will hold the degree of freedom indices for
-  // the element.  These define where in the global system
-  // the element degrees of freedom get mapped.
-  std::vector<dof_id_type> dof_indices;
-  std::vector<dof_id_type> dof_indices_m;
-  std::vector<dof_id_type> dof_indices_m_2;
-
-  // Now we will loop over all the elements in the mesh that
-  // live on the local processor. We will compute the element
-  // matrix and right-hand-side contribution.  Since the mesh
-  // will be refined we want to only consider the ACTIVE elements,
-  // hence we use a variant of the active_elem_iterator.
-  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
-  const MeshBase::const_element_iterator end_el =
-      mesh.active_local_elements_end();
-
-  double dmdx_left = 0.0, dmdx_right = 0.0;
-
-  for (; el != end_el; ++el)
-  {
-    // Store a pointer to the element we are currently
-    // working on.  This allows for nicer syntax later.
-    const Elem *elem = *el;
-
-    // Get the degree of freedom indices for the
-    // current element.  These define where in the global
-    // matrix and right-hand-side this element will
-    // contribute to.
-    dof_map.dof_indices(elem, dof_indices);
-    dof_map.dof_indices(elem, dof_indices_m, 0);
-    dof_map.dof_indices(elem, dof_indices_m_2, 1);
-
-    unsigned int n_dofs, n_u_dofs;
-
-    n_dofs = dof_indices.size();
-    n_u_dofs = dof_indices_m.size();
-
-    fe_vel->reinit(elem);
-
-    Ke.resize(n_dofs, n_dofs);
-    Fe.resize(n_dofs);
-
-    Kmm.reposition(0, 0, n_u_dofs, n_u_dofs);
-    Kmm2.reposition(0, n_u_dofs, n_u_dofs, n_u_dofs);
-    Km2m2.reposition(n_u_dofs, n_u_dofs, n_u_dofs, n_u_dofs);
-    Km2m.reposition(n_u_dofs, 0, n_u_dofs, n_u_dofs);
-
-    Fm.reposition(0, n_u_dofs);
-    Fm2.reposition(n_u_dofs, n_u_dofs);
-
-    const int dof_index_source = elem->dof_number(system_source_num, 0, 0);
-    double source_cur = system_source.current_solution(dof_index_source);
-
-    const int dof_index_source_2 = elem->dof_number(system_source_num, 1, 0);
-    double source_cur_2 = system_source.current_solution(dof_index_source_2);
-
-    DenseMatrix<double> K_perm(MESH_DIMENSION, MESH_DIMENSION);
-    DenseMatrix<double> K_perm_2(MESH_DIMENSION, MESH_DIMENSION);
-
-    if (InputParam::anis_perm == 0)
-    {
-      K_perm.zero();
-      K_perm_2.zero();
-
-      K_perm(0, 0) = InputParam::permeability;
-      K_perm_2(0, 0) = InputParam::permeability;
-      K_perm(1, 1) = InputParam::permeability;
-      K_perm_2(1, 1) = InputParam::permeability;
-#if (MESH_DIMENSION == 3)
-      K_perm(2, 2) = InputParam::permeability;
-      K_perm_2(2, 2) = InputParam::permeability;
-#endif
-    }
-
-    else
-    {
-
-#if (MESH_DIMENSION == 2)
-      const int dof_index_00 = elem->dof_number(K_system.number(), 0, 0);
-      K_perm(0, 0) = K_solution(dof_index_00);
-      const int dof_index_01 = elem->dof_number(K_system.number(), 1, 0);
-      K_perm(0, 1) = K_solution(dof_index_01);
-
-      const int dof_index_10 = elem->dof_number(K_system.number(), 2, 0);
-      K_perm(1, 0) = K_solution(dof_index_10);
-      const int dof_index_11 = elem->dof_number(K_system.number(), 3, 0);
-      K_perm(1, 1) = K_solution(dof_index_11);
-
-      const int dof_index_00_2 = elem->dof_number(K_system.number(), 3, 0);
-      K_perm_2(0, 0) = K_solution(dof_index_00_2);
-      const int dof_index_01_2 = elem->dof_number(K_system.number(), 3, 0);
-      K_perm_2(0, 1) = K_solution(dof_index_01_2);
-
-      const int dof_index_10_2 = elem->dof_number(K_system.number(), 5, 0);
-      K_perm_2(1, 0) = K_solution(dof_index_10_2);
-      const int dof_index_11_2 = elem->dof_number(K_system.number(), 6, 0);
-      K_perm_2(1, 1) = K_solution(dof_index_11_2);
-
-#elif (MESH_DIMENSION == 3)
-      const int dof_index_00 = elem->dof_number(K_system.number(), 0, 0);
-      K_perm(0, 0) = K_solution(dof_index_00);
-      const int dof_index_01 = elem->dof_number(K_system.number(), 1, 0);
-      K_perm(0, 1) = K_solution(dof_index_01);
-      const int dof_index_02 = elem->dof_number(K_system.number(), 2, 0);
-      K_perm(0, 2) = K_solution(dof_index_02);
-
-      const int dof_index_10 = elem->dof_number(K_system.number(), 3, 0);
-      K_perm(1, 0) = K_solution(dof_index_10);
-      const int dof_index_11 = elem->dof_number(K_system.number(), 4, 0);
-      K_perm(1, 1) = K_solution(dof_index_11);
-      const int dof_index_12 = elem->dof_number(K_system.number(), 5, 0);
-      K_perm(1, 2) = K_solution(dof_index_12);
-
-      const int dof_index_20 = elem->dof_number(K_system.number(), 6, 0);
-      K_perm(2, 0) = K_solution(dof_index_20);
-      const int dof_index_21 = elem->dof_number(K_system.number(), 7, 0);
-      K_perm(2, 1) = K_solution(dof_index_21);
-      const int dof_index_22 = elem->dof_number(K_system.number(), 8, 0);
-      K_perm(2, 2) = K_solution(dof_index_22);
-
-      const int dof_index_00_2 = elem->dof_number(K_system.number(), 9, 0);
-      K_perm_2(0, 0) = K_solution(dof_index_00_2);
-      const int dof_index_01_2 = elem->dof_number(K_system.number(), 10, 0);
-      K_perm_2(0, 1) = K_solution(dof_index_01_2);
-      const int dof_index_02_2 = elem->dof_number(K_system.number(), 11, 0);
-      K_perm_2(0, 2) = K_solution(dof_index_02_2);
-
-      const int dof_index_10_2 = elem->dof_number(K_system.number(), 12, 0);
-      K_perm_2(1, 0) = K_solution(dof_index_10_2);
-      const int dof_index_11_2 = elem->dof_number(K_system.number(), 13, 0);
-      K_perm_2(1, 1) = K_solution(dof_index_11_2);
-      const int dof_index_12_2 = elem->dof_number(K_system.number(), 14, 0);
-      K_perm_2(1, 2) = K_solution(dof_index_12_2);
-
-      const int dof_index_20_2 = elem->dof_number(K_system.number(), 15, 0);
-      K_perm_2(2, 0) = K_solution(dof_index_20_2);
-      const int dof_index_21_2 = elem->dof_number(K_system.number(), 16, 0);
-      K_perm_2(2, 1) = K_solution(dof_index_21_2);
-      const int dof_index_22_2 = elem->dof_number(K_system.number(), 17, 0);
-      K_perm_2(2, 2) = K_solution(dof_index_22_2);
-#endif
-    }
-
-    // Now we will build the element matrix and right-hand-side.
-    // Constructing the RHS requires the solution and its
-    // gradient from the previous timestep.  This must be
-    // calculated at each quadrature point by summing the
-    // solution degree-of-freedom values by the appropriate
-    // weight functions.
-    for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
-    {
-
-      double m_old = 0.0, m_old_2 = 0.0;
-      DenseVector<double> gradmH, gradmH2;
-      gradmH.resize(MESH_DIMENSION);
-      gradmH2.resize(MESH_DIMENSION);
-      for (unsigned int j = 0; j < n_u_dofs; j++)
-      {
-        m_old += phi[j][qp] * (flow_system.current_solution(dof_indices_m[j]));
-        m_old_2 += phi[j][qp] * (flow_system.current_solution(dof_indices_m_2[j]));
-
-        for (unsigned int i = 0; i < dim; i++)
-        {
-          gradmH(i) += dphi[j][qp](i) * flow_system.current_solution(dof_indices_m[j]);
-          gradmH2(i) += dphi[j][qp](i) * flow_system.current_solution(dof_indices_m_2[j]);
-        }
-      }
-
-      GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
-
-      K_perm.left_multiply(GeomPar::FInv);
-      K_perm.right_multiply(GeomPar::FInvTra);
-      K_perm.scale(GeomPar::detF * permeability);
-
-      DenseVector<double> kdivXP(MESH_DIMENSION);
-      K_perm.vector_mult(kdivXP, GeomPar::grad_pre);
-
-      K_perm_2.left_multiply(GeomPar::FInv);
-      K_perm_2.right_multiply(GeomPar::FInvTra);
-      K_perm_2.scale(GeomPar::detF * permeability);
-
-      DenseVector<double> kdivXP_2(MESH_DIMENSION);
-      K_perm_2.vector_mult(kdivXP_2, GeomPar::grad_pre);
-
-      for (unsigned int dof_i = 0; dof_i < n_u_dofs; dof_i++)
-      {
-        DenseVector<double> gradNA;
-        gradNA.resize(MESH_DIMENSION);
-        for (unsigned int i = 0; i < dim; i++)
-        {
-          gradNA(i) = dphi[dof_i][qp](i);
-        }
-
-        DenseVector<double> kdivXmH(MESH_DIMENSION);
-        K_perm.vector_mult(kdivXmH, gradmH);
-
-        DenseVector<double> kdivXmH2(MESH_DIMENSION);
-        K_perm_2.vector_mult(kdivXmH2, gradmH2);
-
-        Fm(dof_i) += ((m_old / dt) * phi[dof_i][qp]) * JxW[qp]; // + MatVecOper::contractVec(kdivXP, gradNA) * JxW[qp];
-
-        // Fm(dof_i) += -0.5 * kappa_0 * MatVecOper::contractVec(kdivXmH, gradNA) * JxW[qp];
-
-        Fm2(dof_i) += ((m_old_2 / dt) * phi[dof_i][qp]) * JxW[qp]; // + MatVecOper::contractVec(kdivXP_2, gradNA) * JxW[qp];
-
-        // Fm2(dof_i) += -0.5 * kappa_0 * MatVecOper::contractVec(kdivXmH2, gradNA) * JxW[qp];
-
-        // Fm(dof_i) += (source_cur - source_cur_2) * phi[dof_i][qp] * JxW[qp];
-
-        // Fm2(dof_i) += source_cur_2 * phi[dof_i][qp] * JxW[qp];
-
-        // Fm2(dof_i) += 0.3 * phi[dof_i][qp] * JxW[qp];
-
-        Fm(dof_i) += source_cur * phi[dof_i][qp] * JxW[qp];
-        // Fm(dof_i) += kappa_0 * (source_cur * (2.37 / 0.83)) * phi[dof_i][qp] * JxW[qp];
-        // Fm(dof_i) += kappa_0 * (2.37/1000.0)*phi[dof_i][qp] * JxW[qp];
-        // Fm2(dof_i) += kappa_0*(source_cur_2) * phi[dof_i][qp] * JxW[qp];
-
-        // Matrix contributions for the uu and vv couplings.
-        for (unsigned int dof_j = 0; dof_j < n_u_dofs; dof_j++)
-        {
-          DenseVector<double> gradNB;
-          gradNB.resize(MESH_DIMENSION);
-          for (unsigned int i = 0; i < dim; i++)
-          {
-            gradNB(i) = dphi[dof_j][qp](i);
-          }
-
-          DenseVector<double> kdivXNB(MESH_DIMENSION);
-          K_perm.vector_mult(kdivXNB, gradNB);
-
-          DenseVector<double> kdivXNB_2(MESH_DIMENSION);
-          K_perm_2.vector_mult(kdivXNB_2, gradNB);
-
-          Kmm(dof_i, dof_j) += (1.0 / dt) * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-          Kmm(dof_i, dof_j) += kappa_0 * MatVecOper::contractVec(kdivXNB, gradNA) * JxW[qp];
-          // Kmm(dof_i, dof_j) += 0.5 * kappa_0 * MatVecOper::contractVec(kdivXNB, gradNA) * JxW[qp];
-
-          Km2m2(dof_i, dof_j) += (1.0 / dt) * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-          Km2m2(dof_i, dof_j) += kappa_0 * MatVecOper::contractVec(kdivXNB_2, gradNA) * JxW[qp];
-          // Km2m2(dof_i, dof_j) += 0.5 * kappa_0 * MatVecOper::contractVec(kdivXNB_2, gradNA) * JxW[qp];
-
-          // cout << (1.0 / dt) * phi[dof_i][qp] * phi[dof_j][qp] << " " << MatVecOper::contractVec(kdivXNB, gradNA)<<endl;
-
-          // Kmm(dof_i, dof_j) += source_cur_2 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-          // Kmm2(dof_i, dof_j) += -source_cur_2 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-
-          // Km2m(dof_i, dof_j) += -source_cur_2 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-          // Km2m2(dof_i, dof_j) += +source_cur_2 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-
-          Kmm(dof_i, dof_j) += source_cur_2 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-          Kmm2(dof_i, dof_j) += -source_cur_2 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-
-          Km2m(dof_i, dof_j) += -source_cur_2 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-          Km2m2(dof_i, dof_j) += +source_cur_2 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-
-          Km2m2(dof_i, dof_j) += 1.0e-5 * kappa_0 * phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-        }
-      }
-    } // end of the quadrature point qp-loop
-
-    // cout << "Fe=" << Fe << endl;
-    // cout << "Ke=" << Ke << endl;
-
-    for (unsigned int side = 0; side < elem->n_sides(); side++)
-      if (elem->neighbor_ptr(side) == libmesh_nullptr)
-      {
-
-        const std::vector<std::vector<Real>> &phi_face = fe_face->get_phi();
-        const std::vector<Real> &JxW_face = fe_face->get_JxW();
-        const std::vector<std::vector<RealGradient>> &dphi_face = fe_face->get_dphi();
-        const std::vector<Point> &normal_face = fe_face->get_normals();
-
-        const std::vector<Point> &Xref = fe_face->get_xyz();
-
-        fe_face->reinit(elem, side);
-
-        for (unsigned int qp = 0; qp < qface.n_points(); qp++)
-        {
-
-          for (std::size_t i = 0; i < phi_face.size(); i++)
-          {
-            for (std::size_t j = 0; j < phi_face.size(); j++)
-            {
-              DenseVector<double> gradNB_face;
-              gradNB_face.resize(MESH_DIMENSION);
-              for (unsigned int ii = 0; ii < dim; ii++)
-              {
-                gradNB_face(ii) = dphi_face[j][qp](ii);
-              }
-
-              DenseVector<double> kdivXNB_face(MESH_DIMENSION);
-              K_perm.vector_mult(kdivXNB_face, gradNB_face);
-
-              //               Kmm(i, j) += -kappa_0 * kdivXNB_face(0) * phi_face[i][qp] * normal_face[qp].operator()(0) * JxW_face[qp];
-              //               Kmm(i, j) += -kappa_0 * kdivXNB_face(1) * phi_face[i][qp] * normal_face[qp].operator()(1) * JxW_face[qp];
-              // #if (MESH_DIMENSION == 3)
-              //               Kmm(i, j) += -kappa_0 * kdivXNB_face(2) * phi_face[i][qp] * normal_face[qp].operator()(2) * JxW_face[qp];
-              // #endif
-
-              //               Km2m2(i, j) += -kappa_0 * kdivXNB_face(0) * phi_face[i][qp] * normal_face[qp].operator()(0) * JxW_face[qp];
-              //               Km2m2(i, j) += -kappa_0 * kdivXNB_face(1) * phi_face[i][qp] * normal_face[qp].operator()(1) * JxW_face[qp];
-              // #if (MESH_DIMENSION == 3)
-              //               Km2m2(i, j) += -kappa_0 * kdivXNB_face(2) * phi_face[i][qp] * normal_face[qp].operator()(2) * JxW_face[qp];
-              // #endif
-            }
-          }
-
-          Point pj;
-          pj(0) = 0.0;
-          pj(1) = 0.0;
-          pj(2) = 5.0;
-
-          Point elem_cent = elem->centroid();
-
-          double z_cur = pj(2);
-
-          double sigma_g = 1.0;
-
-          double a_const = 1.0 / (sigma_g * sqrt(2.0 * M_PI));
-          double b_const = -1.0 / (2 * sigma_g * sigma_g);
-
-          Point cent_diff = pj;
-          cent_diff.subtract(elem_cent);
-          double dist_2 = cent_diff.norm_sq();
-          double w_cur = -a_const * exp(b_const * (dist_2));
-
-          if (z_cur > 4.975)
-          {
-            for (std::size_t i = 0; i < phi_face.size(); i++)
-            {
-              // Fm(i) += -kappa_0*w_cur*phi_face[i][qp] * JxW_face[qp];
-            }
-          }
-        }
-      }
-
-    flow_system.matrix->add_matrix(Ke, dof_indices);
-    flow_system.rhs->add_vector(Fe, dof_indices);
-  } // end of element loop
-}
 
 void PoroElastic::assemble_porous_p2p1(
     EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
@@ -5725,115 +5046,6 @@ void PoroElastic::assemble_porous_p2p1(
   } // end of element loop
 }
 
-void PoroElastic::assemble_ppore_heir(
-    EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
-{
-  // Get a constant reference to the mesh object.
-  const MeshBase &mesh = es.get_mesh();
-
-  // The dimension that we are running
-  const unsigned int dim = mesh.mesh_dimension();
-
-  // Get a reference to the Stokes system object.
-  LinearImplicitSystem &ppore_system =
-      es.get_system<LinearImplicitSystem>("pPoreSystem");
-
-  System &system_flow = es.get_system<System>("mHSystem");
-
-  unsigned int u_var;
-
-  // Numeric ids corresponding to each variable in the system
-  u_var = ppore_system.variable_number("pPoreVar");
-  FEType fe_vel_type = ppore_system.variable_type(u_var);
-  UniquePtr<FEBase> fe_vel(FEBase::build(dim, fe_vel_type));
-  QGauss qrule(dim, CONSTANT);
-
-  // Tell the finite element objects to use our quadrature rule.
-  fe_vel->attach_quadrature_rule(&qrule);
-
-  const std::vector<double> &JxW = fe_vel->get_JxW();
-  const std::vector<std::vector<double>> &phi = fe_vel->get_phi();
-  const std::vector<std::vector<RealGradient>> &dphi = fe_vel->get_dphi();
-
-  const DofMap &dof_map = ppore_system.get_dof_map();
-
-  // Define data structures to contain the element matrix
-  // and right-hand-side vector contribution.  Following
-  // basic finite element terminology we will denote these
-  // "Ke" and "Fe".
-  DenseMatrix<double> Ke;
-  DenseVector<double> Fe;
-
-  // This vector will hold the degree of freedom indices for
-  // the element.  These define where in the global system
-  // the element degrees of freedom get mapped.
-  std::vector<dof_id_type> dof_indices;
-  std::vector<dof_id_type> dof_indices_m;
-
-  // Now we will loop over all the elements in the mesh that
-  // live on the local processor. We will compute the element
-  // matrix and right-hand-side contribution.  Since the mesh
-  // will be refined we want to only consider the ACTIVE elements,
-  // hence we use a variant of the active_elem_iterator.
-  MeshBase::const_element_iterator el = mesh.active_local_elements_begin();
-  const MeshBase::const_element_iterator end_el =
-      mesh.active_local_elements_end();
-
-  for (; el != end_el; ++el)
-  {
-    // Store a pointer to the element we are currently
-    // working on.  This allows for nicer syntax later.
-    const Elem *elem = *el;
-
-    // Get the degree of freedom indices for the
-    // current element.  These define where in the global
-    // matrix and right-hand-side this element will
-    // contribute to.
-    dof_map.dof_indices(elem, dof_indices);
-    dof_map.dof_indices(elem, dof_indices_m, 0);
-
-    unsigned int n_dofs;
-
-    n_dofs = dof_indices.size();
-
-    fe_vel->reinit(elem);
-
-    Ke.resize(n_dofs, n_dofs);
-    Fe.resize(n_dofs);
-
-    // Now we will build the element matrix and right-hand-side.
-    // Constructing the RHS requires the solution and its
-    // gradient from the previous timestep.  This must be
-    // calculated at each quadrature point by summing the
-    // solution degree-of-freedom values by the appropriate
-    // weight functions.
-    for (unsigned int qp = 0; qp < qrule.n_points(); qp++)
-    {
-
-      double m_cur = 0.0;
-      for (unsigned int j = 0; j < n_dofs; j++)
-      {
-        m_cur += phi[j][qp] * (system_flow.current_solution(dof_indices_m[j]));
-      }
-
-      GeomPar::compute_geoPar(es, elem, qp, phi, dphi);
-
-      for (unsigned int dof_i = 0; dof_i < n_dofs; dof_i++)
-      {
-
-        Fe(dof_i) += (GeomPar::pressure + kappa_0 * m_cur) * phi[dof_i][qp] * JxW[qp];
-
-        for (unsigned int dof_j = 0; dof_j < n_dofs; dof_j++)
-        {
-          Ke(dof_i, dof_j) += phi[dof_i][qp] * phi[dof_j][qp] * JxW[qp];
-        }
-      }
-    } // end of the quadrature point qp-loop
-
-    ppore_system.matrix->add_matrix(Ke, dof_indices);
-    ppore_system.rhs->add_vector(Fe, dof_indices);
-  } // end of element loop
-}
 
 void PoroElastic::assemble_porous_p2p1_2(
     EquationSystems &es, const std::string &libmesh_dbg_var(system_name))
@@ -7227,24 +6439,31 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
   libMesh::MeshBase::const_node_iterator node_end = mesh.local_nodes_end();
 
   double p_err = 0.0;
-  double w_err = 0.0;
+  double p_disc_err = 0.0;
+  double w_disc_err = 0.0;
   double node_num = 0.0;
+
+  double node_num_disc;
 
   for (; node_it != node_end; ++node_it)
   {
     node_num = node_num + 1.0;
     const libMesh::Node *nd = *node_it;
 
-    vector<double> p_pois, m_darc, p_darc, phi_comp, w_comp, q_comp, p_disc;
+    vector<double> p_pois, m_darc, p_darc, phi_comp,q_comp;
     p_pois.resize(comp_size, 0.0);
-    p_disc.resize(comp_size, 0.0);
     m_darc.resize(comp_size, 0.0);
     p_darc.resize(comp_size, 0.0);
     phi_comp.resize(comp_size, 0.0);
-    w_comp.resize(comp_size, 0.0);
     q_comp.resize(comp_size, 0.0);
 
-    double p_pois_mean = 0.0, p_darc_mean = 0.0, phi_mean = 0.0, w_mean = 0.0, q_mean = 0.0;;
+    vector<double> p_disc,w_disc,vol_disc;
+    p_disc.resize(comp_size, 0.0);
+    w_disc.resize(comp_size, 0.0);
+    vol_disc.resize(comp_size, 0.0);
+
+    double p_pois_mean = 0.0,  p_darc_mean = 0.0, phi_mean = 0.0, q_mean = 0.0;
+    double p_disc_mean = 0.0, w_disc_mean = 0.0, vol_disc_mean = 0.0;
 
     for (int i = 0; i < comp_size; i++)
     {
@@ -7252,6 +6471,8 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
                                                         comp_system.variable_number("p" + std::to_string(i + 1) + "Comp"), 0);
       const unsigned int dof_num_pdisc = nd->dof_number(comp_system.number(),
                                                         comp_system.variable_number("pDisc" + std::to_string(i + 1) + "Comp"), 0);
+      const unsigned int dof_num_voldisc = nd->dof_number(comp_system.number(),
+                                                        comp_system.variable_number("volDisc" + std::to_string(i + 1) + "Comp"), 0);
       const unsigned int dof_num_phicomp = nd->dof_number(comp_system.number(),
                                                           comp_system.variable_number("phi" + std::to_string(i + 1) + "Comp"), 0);
       const unsigned int dof_num_mdarc = nd->dof_number(m_comp_system.number(),
@@ -7264,40 +6485,58 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
                                                     q_comp_system.variable_number("q" + std::to_string(i + 1) + "Comp"), 0);
 
       p_pois[i] = comp_vec[dof_num_ppois];
-      phi_comp[i] = comp_vec[dof_num_phicomp];
       m_darc[i] = m_comp_vec[dof_num_mdarc];
+      q_comp[i] = q_comp_vec[dof_num_q];
+      phi_comp[i] = comp_vec[dof_num_phicomp];
 
       p_darc[i] = m_darc[i] * kappa_0;
 
-      w_comp[i] = comp_vec[dof_num_w];
-      q_comp[i] = q_comp_vec[dof_num_q];
-
       p_pois_mean += p_pois[i] * phi_comp[i];
       p_darc_mean += p_darc[i] * phi_comp[i];
+      q_mean += q_comp[i] * phi_comp[i];
+
       phi_mean += phi_comp[i];
 
-      w_mean += w_comp[i] * phi_comp[i];
-      q_mean += q_comp[i] * phi_comp[i];
+      p_disc[i] = comp_vec[dof_num_pdisc];
+      w_disc[i] = comp_vec[dof_num_w];
+      vol_disc[i] = comp_vec[dof_num_voldisc];
+
+      p_disc_mean += p_disc[i] * vol_disc[i];
+      w_disc_mean += w_disc[i] * vol_disc[i];
+   
+      vol_disc_mean += vol_disc[i];     
     }
 
     if (phi_mean > 1.0e-8)
     {
       p_pois_mean /= phi_mean;
       p_darc_mean /= phi_mean;
-      w_mean /= phi_mean;
       q_mean /= phi_mean;
+
+      p_err += pow((p_pois_mean - p_darc_mean) / 1.3e5, 2);
     }
 
+    if(vol_disc_mean > 1.0e-8)
+    {
+      node_num_disc = node_num_disc + 1.0;
 
-    p_err += pow((p_pois_mean - p_darc_mean) / 1.3e5, 2);
-    w_err += pow((w_mean - q_mean)/380.0, 2);
+      p_disc_mean /= vol_disc_mean;
+      w_disc_mean /= vol_disc_mean;
+
+      p_disc_err += pow((p_disc_mean - p_darc_mean) / 1.3e5, 2);
+      w_disc_err += pow((w_disc_mean - q_mean) / 380.0, 2);
+    }
+    
   }
 
   p_err = sqrt(p_err / node_num);
-  w_err = sqrt(w_err / node_num);
+
+  p_disc_err = sqrt(p_disc_err / node_num_disc);
+  w_disc_err = sqrt(w_disc_err / node_num_disc);
 
   cout << "P_ERROR=" << p_err << endl;
-  cout << "W_ERROR=" << w_err << endl;
+  cout << "P_DISC_ERROR=" << p_disc_err << endl;
+  cout << "W_DISC_ERROR=" << w_disc_err << endl;
 }
 
 void PoroElastic::assemble_q_comp(

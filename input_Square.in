@@ -8,7 +8,7 @@ mesh_scale = 0.1 // 1.0 //0.1
 mesh_centre = 1
 mesh_dim = 3 //2
 
-comp_size = 2
+comp_size = 3
 
 second_order_elem = 0 // 0 for first order 1 for second order
 
