@@ -40,6 +40,9 @@ anis_perm = 0 // 1
 
 homegen = 0  // 1 for homegeneous permeability, 0 for non-homogeneous permeability
 
+beta_homo = 0 // 1 for homegeneous beta, 0 for non-homogeneous beta
+
+
 solve_hyper = 0
 
 approx_order = FIRST

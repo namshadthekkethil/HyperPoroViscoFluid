@@ -127,7 +127,7 @@ public:
   static double coord_source[4][21990];
   static DenseMatrix<double> porous_data;
   static DenseVector<vector<double>> source_data;
-  static int read_source,read_tree,read_permeability, comp_size, homegen;
+  static int read_source,read_tree,read_permeability, comp_size, homegen, beta_homo;
   static vector<int> near_vess;
   static vector<double> source_vess;
   static double tau_vispe, beta_const;

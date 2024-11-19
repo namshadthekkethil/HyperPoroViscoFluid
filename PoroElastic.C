@@ -24,7 +24,8 @@ DenseVector<double> PoroElastic::vasc_nodes_x, PoroElastic::vasc_nodes_y,
 
 int PoroElastic::brinkman;
 double PoroElastic::viscocity;
-int PoroElastic::read_source, PoroElastic::read_tree, PoroElastic::read_permeability, PoroElastic::comp_size, PoroElastic::homegen;
+int PoroElastic::read_source, PoroElastic::read_tree, PoroElastic::read_permeability, PoroElastic::comp_size,
+    PoroElastic::homegen, PoroElastic::beta_homo;
 
 double PoroElastic::coord_source[4][21990];
 DenseMatrix<double> PoroElastic::porous_data;
@@ -87,6 +88,8 @@ void PoroElastic::read_input(int rank)
   homegen = infile("homegen", 0);
 
   beta_const = infile("beta_const", 1.0);
+
+  beta_homo = infile("beta_homo", 0);
 }
 
 void PoroElastic::define_systems(EquationSystems &es, int rank)
@@ -482,27 +485,45 @@ void PoroElastic::define_heir_systems(EquationSystems &es)
     comp_system.add_variable(varName, FIRST, LAGRANGE);
   }
 
-  for (int k = 1; k <= comp_size; ++k)
-  {
-    for (int i = 0; i <= 2; ++i)
-    {
-      for (int j = 0; j <= 2; ++j)
-      {
-        std::string var_name = "KElem" + std::to_string(k) + "Comp" + std::to_string(i) + std::to_string(j);
-        comp_system.add_variable(var_name, CONSTANT, MONOMIAL);
-      }
-    }
-  }
+  // for (int k = 1; k <= comp_size; ++k)
+  // {
+  //   for (int i = 0; i <= 2; ++i)
+  //   {
+  //     for (int j = 0; j <= 2; ++j)
+  //     {
+  //       std::string var_name = "KElem" + std::to_string(k) + "Comp" + std::to_string(i) + std::to_string(j);
+  //       comp_system.add_variable(var_name, CONSTANT, MONOMIAL);
+  //     }
+  //   }
+  // }
 
-  for (int i = 1; i <= comp_size; ++i)
-  {
-    std::string varName = "KElemIso" + std::to_string(i) + "Comp";
-    comp_system.add_variable(varName, CONSTANT, MONOMIAL);
-  }
+  // for (int i = 1; i <= comp_size; ++i)
+  // {
+  //   std::string varName = "KElemIso" + std::to_string(i) + "Comp";
+  //   comp_system.add_variable(varName, CONSTANT, MONOMIAL);
+  // }
 
   for (int i = 1; i <= comp_size; ++i)
   {
     std::string varName = "volDisc" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "phiHomo" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "betaHomo" + std::to_string(i) + "Comp";
+    comp_system.add_variable(varName, FIRST, LAGRANGE);
+  }
+
+  for (int i = 1; i <= comp_size; ++i)
+  {
+    std::string varName = "KHomo" + std::to_string(i) + "Comp";
     comp_system.add_variable(varName, FIRST, LAGRANGE);
   }
 
@@ -6056,9 +6077,14 @@ void PoroElastic::assemble_m_comp(
   vector<vector<dof_id_type>> dof_indices_beta;
   vector<vector<dof_id_type>> dof_indices_source;
 
+  vector<vector<dof_id_type>> dof_indices_beta_homo;
+  vector<vector<dof_id_type>> dof_indices_K_homo;
+
   dof_indices_beta.resize(comp_size);
   dof_indices_source.resize(comp_size);
   dof_indices_Kiso.resize(comp_size);
+  dof_indices_beta_homo.resize(comp_size);
+  dof_indices_K_homo.resize(comp_size);
 
   int last_comp = 1; //
   int out_cond = 1;  // 0 for source and 1 for pressure diff
@@ -6078,30 +6104,30 @@ void PoroElastic::assemble_m_comp(
     // working on.  This allows for nicer syntax later.
     const Elem *elem = *el;
 
-    vector<double> K_iso_elem;
-    K_iso_elem.resize(comp_size, 0.0);
+    // vector<double> K_iso_elem;
+    // K_iso_elem.resize(comp_size, 0.0);
 
-    vector<DenseMatrix<double>> K_comp_elem;
-    K_comp_elem.resize(comp_size);
+    // vector<DenseMatrix<double>> K_comp_elem;
+    // K_comp_elem.resize(comp_size);
 
-    for (int k = 0; k < comp_size; k++)
-    {
-      K_comp_elem[k].resize(MESH_DIMENSION, MESH_DIMENSION);
+    // for (int k = 0; k < comp_size; k++)
+    // {
+    //   K_comp_elem[k].resize(MESH_DIMENSION, MESH_DIMENSION);
 
-      for (int ii = 0; ii < 3; ii++)
-      {
-        for (int jj = 0; jj < 3; jj++)
-        {
-          const unsigned int dof_index_Kcomp = elem->dof_number(comp_system.number(),
-                                                                comp_system.variable_number("KElem" + std::to_string(k + 1) + "Comp" + std::to_string(ii) + std::to_string(jj)), 0);
-          K_comp_elem[k](ii, jj) = comp_system.current_solution(dof_index_Kcomp);
-        }
-      }
+    //   for (int ii = 0; ii < 3; ii++)
+    //   {
+    //     for (int jj = 0; jj < 3; jj++)
+    //     {
+    //       const unsigned int dof_index_Kcomp = elem->dof_number(comp_system.number(),
+    //                                                             comp_system.variable_number("KElem" + std::to_string(k + 1) + "Comp" + std::to_string(ii) + std::to_string(jj)), 0);
+    //       K_comp_elem[k](ii, jj) = comp_system.current_solution(dof_index_Kcomp);
+    //     }
+    //   }
 
-      const unsigned int dof_index_kiso = elem->dof_number(comp_system.number(),
-                                                           comp_system.variable_number("KElemIso" + std::to_string(k + 1) + "Comp"), 0);
-      K_iso_elem[k] = comp_system.current_solution(dof_index_kiso);
-    }
+    //   const unsigned int dof_index_kiso = elem->dof_number(comp_system.number(),
+    //                                                        comp_system.variable_number("KElemIso" + std::to_string(k + 1) + "Comp"), 0);
+    //   K_iso_elem[k] = comp_system.current_solution(dof_index_kiso);
+    // }
 
     // Get the degree of freedom indices for the
     // current element.  These define where in the global
@@ -6116,6 +6142,8 @@ void PoroElastic::assemble_m_comp(
       dof_map_comp.dof_indices(elem, dof_indices_beta[k], comp_system.variable_number("beta" + std::to_string(k + 1) + "Comp"));
       dof_map_comp.dof_indices(elem, dof_indices_source[k], comp_system.variable_number("source" + std::to_string(k + 1) + "Comp"));
       dof_map_comp.dof_indices(elem, dof_indices_Kiso[k], comp_system.variable_number("KIso" + std::to_string(k + 1) + "Comp"));
+      dof_map_comp.dof_indices(elem, dof_indices_beta_homo[k], comp_system.variable_number("betaHomo" + std::to_string(k + 1) + "Comp"));
+      dof_map_comp.dof_indices(elem, dof_indices_K_homo[k], comp_system.variable_number("KHomo" + std::to_string(k + 1) + "Comp"));
     }
 
     for (int k = 0; k < comp_size; ++k)
@@ -6166,12 +6194,14 @@ void PoroElastic::assemble_m_comp(
         K_perm[k].zero();
       }
 
-      vector<double> m_cur, p_cur, beta_cur, source_cur, K_iso_cur;
+      vector<double> m_cur, p_cur, beta_cur, source_cur, K_iso_cur, beta_homo_cur, K_homo;
       m_cur.resize(comp_size, 0.0);
       p_cur.resize(comp_size, 0.0);
       beta_cur.resize(comp_size, 0.0);
       source_cur.resize(comp_size, 0.0);
       K_iso_cur.resize(comp_size, 0.0);
+      beta_homo_cur.resize(comp_size, 0.0);
+      K_homo.resize(comp_size, 0.0);
 
       for (unsigned int j = 0; j < n_u_dofs; j++)
       {
@@ -6193,31 +6223,12 @@ void PoroElastic::assemble_m_comp(
           beta_cur[k] += beta_const * phi[j][qp] * (comp_system.current_solution(dof_indices_beta[k][j]));
           source_cur[k] += phi[j][qp] * (comp_system.current_solution(dof_indices_source[k][j]));
           K_iso_cur[k] += phi[j][qp] * (comp_system.current_solution(dof_indices_Kiso[k][j]));
+
+          beta_homo_cur[k] += beta_const * phi[j][qp] * (comp_system.current_solution(dof_indices_beta_homo[k][j]));
+          K_homo[k] += phi[j][qp] * (comp_system.current_solution(dof_indices_K_homo[k][j]));
         }
       }
 
-      for (int k = 0; k < comp_size; k++)
-      {
-        // K_perm[k] = K_comp_elem[k];
-        // K_iso_cur[k] = K_iso_elem[k];
-
-        // for (int ii = 0; ii < dim; ii++)
-        // {
-        //   for (int jj = 0; jj < dim; jj++)
-        //   {
-        //       K_perm[k](jj, ii) = K_perm[k](ii,jj);
-        //   }
-        // }
-
-        // K_perm[k](1, 0) = 0.0;
-        // K_perm[k](2, 0) = 0.0;
-        // K_perm[k](2, 1) = 0.0;
-
-        // K_perm[k](0, 2) = 0.0;
-        // K_perm[k](2, 0) = 0.0;
-        // K_perm[k](1, 2) = 0.0;
-        // K_perm[k](2, 1) = 0.0;
-      }
 
       // beta_cur[1] *= 50.0;
 
@@ -6229,46 +6240,28 @@ void PoroElastic::assemble_m_comp(
 
           if (homegen == 1)
           {
-            if (comp_size == 2)
+
+            K_perm[k].zero();
+            K_perm[k](0,0)  = K_homo[k];
+            K_perm[k](1, 1) = K_homo[k];
+ #if(MESH_DIMENSION == 3)
+            K_perm[k](2, 2) = K_homo[k];
+#endif
+            if(beta_homo == 1)
             {
-              if (k == 0)
-                k_iso = 3.9e-5;
-              else
-                k_iso = 3.8e-6;
-            }
-            else if (comp_size == 3)
-            {
-              if (k == 0)
-                k_iso = 3.9e-5;
-              else if (k == 1)
-                k_iso = 3.58e-6;
-              else
-                k_iso = 1.96e-7;
-            }
-            else if (comp_size == 4)
-            {
-              if (k == 0)
-                k_iso = 3.90009e-05;
-              else if (k == 1)
-                k_iso = 3.27579e-06;
-              else if (k == 2)
-                k_iso = 3.0077e-07;
-              else
-                k_iso = 1.96262e-07;
+              beta_cur[k] = beta_homo_cur[k];
             }
           }
 
           else
           {
-            k_iso = K_iso_cur[k];
-          }
-
-          K_perm[k].zero();
-          K_perm[k](0, 0) = k_iso; // K_iso_cur[k];// k_iso;
-          K_perm[k](1, 1) = k_iso; //  K_iso_cur[k]; //k_iso;
+            K_perm[k].zero();
+            K_perm[k](0, 0) = K_iso_cur[k];
+            K_perm[k](1, 1) = K_iso_cur[k];
 #if (MESH_DIMENSION == 3)
-          K_perm[k](2, 2) = k_iso; //  K_iso_cur[k]; // k_iso;
+            K_perm[k](2, 2) = K_iso_cur[k];
 #endif
+          }
         }
       }
 
@@ -6473,8 +6466,13 @@ void PoroElastic::compute_comp_error(EquationSystems &es)
                                                         comp_system.variable_number("pDisc" + std::to_string(i + 1) + "Comp"), 0);
       const unsigned int dof_num_voldisc = nd->dof_number(comp_system.number(),
                                                         comp_system.variable_number("volDisc" + std::to_string(i + 1) + "Comp"), 0);
-      const unsigned int dof_num_phicomp = nd->dof_number(comp_system.number(),
+      unsigned int dof_num_phicomp = nd->dof_number(comp_system.number(),
                                                           comp_system.variable_number("phi" + std::to_string(i + 1) + "Comp"), 0);
+      if(beta_homo == 1)
+      {
+        dof_num_phicomp = nd->dof_number(comp_system.number(),
+                                         comp_system.variable_number("phiHomo" + std::to_string(i + 1) + "Comp"), 0);
+      }
       const unsigned int dof_num_mdarc = nd->dof_number(m_comp_system.number(),
                                                         m_comp_system.variable_number("m" + std::to_string(i + 1) + "Comp"), 0);
 
@@ -6743,29 +6741,29 @@ void PoroElastic::assemble_q_comp(
             if (comp_size == 2)
             {
               if (k == 0)
-                k_iso = 3.9e-5;
+                k_iso = 6.17459e-05;// 4.97463e-05;// 3.9e-5;
               else
-                k_iso = 3.8e-6;
+                k_iso = 5.42411e-06;// 5.54819e-06; // 3.8e-6;
             }
             else if (comp_size == 3)
             {
               if (k == 0)
-                k_iso = 3.9e-5;
+                k_iso = 6.17459e-05;// 4.97463e-05;// 3.9e-5;
               else if (k == 1)
-                k_iso = 3.58e-6;
+                k_iso =5.15771e-06;// 5.21805e-06;// 3.58e-6;
               else
-                k_iso = 1.96e-7;
+                k_iso =2.66399e-07;// 3.30138e-07;// 1.96e-7;
             }
             else if (comp_size == 4)
             {
               if (k == 0)
-                k_iso = 3.90009e-05;
+                k_iso = 6.17459e-05;// 4.97463e-05; // 3.90009e-05;
               else if (k == 1)
-                k_iso = 3.27579e-06;
+                k_iso = 4.89824e-06;// 4.95433e-06;// 3.27579e-06;
               else if (k == 2)
-                k_iso = 3.0077e-07;
+                k_iso = 3.27354e-07;// 3.24507e-07;// 3.0077e-07;
               else
-                k_iso = 1.96262e-07;
+                k_iso = 1.98512e-07;// 2.69354e-07; // 1.96262e-07;
             }
           }
 
